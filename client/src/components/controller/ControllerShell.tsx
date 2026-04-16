@@ -16,47 +16,76 @@ interface Props {
 export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady }: Props) {
   const { playerIndex, currentGame, scores, timer, round, alive, winner } = state;
   const myIndex = playerIndex ?? 0;
+  const isLandscape = currentGame !== "Lobby";
 
   return (
-    <div className="controller-root" style={{ background: "var(--bg)" }}>
-
-      {/* Header: player info + score */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.85rem 1.25rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+    <div
+      className="controller-root"
+      style={{
+        background: "var(--bg)",
+        flexDirection: isLandscape ? "row" : "column",
+      }}
+    >
+      {/* ── Header / sidebar ── */}
+      <div style={{
+        display: "flex",
+        flexDirection: isLandscape ? "column" : "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: isLandscape ? "1rem 0.75rem" : "0.75rem 1.25rem",
+        borderRight: isLandscape ? "1px solid var(--border)" : "none",
+        borderBottom: isLandscape ? "none" : "1px solid var(--border)",
+        flexShrink: 0,
+        gap: isLandscape ? "1.5rem" : 0,
+        minWidth: isLandscape ? 64 : "auto",
+      }}>
+        {/* Player badge */}
+        <div style={{ display: "flex", flexDirection: isLandscape ? "column" : "row", alignItems: "center", gap: "0.4rem" }}>
           <PlayerDot index={myIndex} />
-          <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-            P{myIndex + 1}
-          </span>
+          <span style={{ fontWeight: 700, fontSize: "0.8rem" }}>P{myIndex + 1}</span>
           {alive[myIndex] === false && (
-            <span style={{ fontSize: "0.7rem", color: "#ef4444", fontWeight: 600 }}>DEAD</span>
+            <span style={{ fontSize: "0.6rem", color: "#ef4444", fontWeight: 600 }}>DEAD</span>
           )}
         </div>
 
         {/* Score */}
-        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: isLandscape ? "column" : "row", gap: isLandscape ? "0.5rem" : "1rem", alignItems: "center" }}>
           <Score value={scores[0]} active={myIndex === 0} />
-          <span style={{ color: "#444", fontSize: "0.8rem" }}>vs</span>
+          <span style={{ color: "#333", fontSize: "0.7rem" }}>vs</span>
           <Score value={scores[1]} active={myIndex === 1} />
         </div>
 
         {/* Timer */}
         {timer !== null && (
-          <div style={{ fontSize: "0.9rem", fontWeight: 700, color: timer <= 10 ? "#ef4444" : "#fff", minWidth: 28, textAlign: "right" }}>
+          <div style={{
+            fontSize: "0.85rem", fontWeight: 700,
+            color: timer <= 10 ? "#ef4444" : "#fff",
+            textAlign: "center",
+          }}>
             {timer}s
           </div>
         )}
       </div>
 
-      {/* Game over banner */}
+      {/* ── Game over banner ── */}
       {round === "over" && winner !== null && (
-        <div style={{ padding: "0.75rem", textAlign: "center", background: winner === myIndex ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.1)", borderBottom: "1px solid var(--border)" }}>
-          <span style={{ fontWeight: 700, fontSize: "0.95rem", color: winner === myIndex ? "#22c55e" : "#ef4444" }}>
+        <div style={{
+          padding: "0.6rem 1rem", textAlign: "center",
+          background: winner === myIndex ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.1)",
+          borderBottom: "1px solid var(--border)",
+          position: isLandscape ? "absolute" : "relative",
+          top: isLandscape ? 0 : "auto",
+          left: isLandscape ? 64 : "auto",
+          right: 0,
+          zIndex: 10,
+        }}>
+          <span style={{ fontWeight: 700, fontSize: "0.9rem", color: winner === myIndex ? "#22c55e" : "#ef4444" }}>
             {winner === myIndex ? "🏆 You won!" : "😔 You lost"}
           </span>
         </div>
       )}
 
-      {/* Controller layout — fills remaining space */}
+      {/* ── Controller layout ── */}
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
         <GameLayout
           game={currentGame}
@@ -73,13 +102,7 @@ export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady
 }
 
 function GameLayout({
-  game,
-  myIndex,
-  isReady,
-  onMove,
-  onJump,
-  onTap,
-  onReady,
+  game, myIndex, isReady, onMove, onJump, onTap, onReady,
 }: {
   game: GameName;
   myIndex: number;
@@ -91,14 +114,7 @@ function GameLayout({
 }) {
   switch (game) {
     case "Lobby":
-      return (
-        <LobbyController
-          playerIndex={myIndex}
-          onMove={onMove}
-          onReady={onReady}
-          isReady={isReady}
-        />
-      );
+      return <LobbyController playerIndex={myIndex} onMove={onMove} onReady={onReady} isReady={isReady} />;
     case "CrossingRoad":
       return <DpadController onMove={onMove} />;
     case "HeadSmash":
@@ -112,19 +128,11 @@ function GameLayout({
   }
 }
 
-// ─── Tiny sub-components ─────────────────────────────────────────────────────
-
 function PlayerDot({ index }: { index: number }) {
   const colors = ["#3b82f6", "#f59e0b"];
-  return (
-    <div style={{ width: 10, height: 10, borderRadius: "50%", background: colors[index] ?? "#888" }} />
-  );
+  return <div style={{ width: 10, height: 10, borderRadius: "50%", background: colors[index] ?? "#888", flexShrink: 0 }} />;
 }
 
 function Score({ value, active }: { value: number; active: boolean }) {
-  return (
-    <span style={{ fontSize: "1rem", fontWeight: 700, color: active ? "#fff" : "#555" }}>
-      {value}
-    </span>
-  );
+  return <span style={{ fontSize: "1rem", fontWeight: 700, color: active ? "#fff" : "#555" }}>{value}</span>;
 }

@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaApple, FaGooglePlay, FaInstagram, FaTelegram, FaDiscord } from "react-icons/fa6";
+import { FaXTwitter } from "react-icons/fa6";
 
 const FAQS = [
   { q: "Do I need to download anything?", a: "No downloads required. PlayLana runs entirely in your browser. Just open the link and start playing." },
   { q: "How do I join a game?", a: "The host shares a room code or QR code. Open your phone camera, scan it, and you're in — wallet created automatically." },
   { q: "Can I play with friends?", a: "Yes. Each game supports 2 players using their phones as controllers on a shared screen." },
   { q: "What devices are supported?", a: "Any device with a modern browser. Host screen on a laptop, TV, or projector. Controllers on any smartphone." },
+];
+
+const SOCIALS = [
+  { icon: <FaInstagram size={15} />, label: "Instagram", href: "#" },
+  { icon: <FaTelegram size={15} />, label: "Telegram", href: "#" },
+  { icon: <FaDiscord size={15} />, label: "Discord", href: "#" },
+  { icon: <FaXTwitter size={15} />, label: "X", href: "#" },
 ];
 
 const PX = "'Press Start 2P', monospace";
@@ -208,10 +217,24 @@ export default function Landing() {
           <div>
             <p style={{ fontFamily: PX, fontSize: "0.65rem", color: "#e5e5e5", marginBottom: "1rem" }}>Socials</p>
             <div style={{ display: "flex", gap: "0.6rem" }}>
-              {["IG", "TW", "DC", "X"].map(s => (
-                <div key={s} style={{ width: 32, height: 32, borderRadius: 7, background: "#1e1e1e", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "0.55rem", color: "#444", fontWeight: 700 }}>{s}</span>
-                </div>
+              {SOCIALS.map(({ icon, label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  title={label}
+                  style={{
+                    width: 34, height: 34, borderRadius: 8,
+                    background: "#1e1e1e",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#888", textDecoration: "none",
+                    transition: "color 0.15s, border-color 0.15s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.2)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#888"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
+                >
+                  {icon}
+                </a>
               ))}
             </div>
           </div>
@@ -239,7 +262,9 @@ function FooterCol({ title, links }: { title: string; links: string[] }) {
   return (
     <div>
       <p style={{ fontFamily: PX, fontSize: "0.65rem", color: "#e5e5e5", marginBottom: "1rem" }}>{title}</p>
-      {links.map(l => <a key={l} href="#" style={{ display: "block", color: "#555", fontSize: "0.85rem", marginBottom: "0.5rem", textDecoration: "none" }}>{l}</a>)}
+      {links.map(l => (
+        <a key={l} href="#" style={{ display: "block", color: "#555", fontSize: "0.85rem", marginBottom: "0.5rem", textDecoration: "none" }}>{l}</a>
+      ))}
     </div>
   );
 }
@@ -248,11 +273,26 @@ function FooterCol({ title, links }: { title: string; links: string[] }) {
 
 function AppBadge({ type }: { type: "apple" | "google" }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "0.9rem 1.75rem", cursor: "pointer" }}>
-      <div style={{ width: 24, height: 24, borderRadius: 4, background: "#222", flexShrink: 0 }} />
+    <div style={{
+      display: "flex", alignItems: "center", gap: "0.85rem",
+      background: "#111", border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: 14, padding: "0.9rem 1.75rem", cursor: "pointer",
+      transition: "border-color 0.15s",
+    }}
+      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.2)"}
+      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.1)"}
+    >
+      {type === "apple"
+        ? <FaApple size={26} color="#fff" />
+        : <FaGooglePlay size={24} color="#fff" />
+      }
       <div>
-        <div style={{ fontSize: "0.65rem", color: "#666", marginBottom: 2 }}>{type === "apple" ? "Download on the" : "GET IT ON"}</div>
-        <div style={{ fontSize: "1rem", fontWeight: 700, color: "#fff" }}>{type === "apple" ? "App Store" : "Google Play"}</div>
+        <div style={{ fontSize: "0.65rem", color: "#666", marginBottom: 3 }}>
+          {type === "apple" ? "Download on the" : "GET IT ON"}
+        </div>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "#fff" }}>
+          {type === "apple" ? "App Store" : "Google Play"}
+        </div>
       </div>
     </div>
   );
