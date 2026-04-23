@@ -6,9 +6,9 @@
 
 ## What Is PlayLana?
 
-PlayLana is a browser-based multiplayer gaming platform. One device (laptop/TV/tablet) runs the **shared game screen**. Players join using their **phones as controllers** — no app downloads, just a browser link or QR code.
+PlayLana is a browser-based multiplayer gaming platform. One device (laptop, TV, or tablet) runs the **shared game screen**. Players join using their **phones as controllers** — no app downloads required, just a browser link or QR code.
 
-**Live URLs:**
+**Live URL:**
 https://play-lana.vercel.app
 
 ---
@@ -17,13 +17,13 @@ https://play-lana.vercel.app
 
 ```
 PlayLana/
-├── client/          # Vite + React + TypeScript  →  Vercel
-└── backend/         # Node.js + TypeScript + ws  →  Railway
+├── client/       # Vite + React + TypeScript  →  Vercel
+└── backend/      # Node.js + TypeScript + ws  →  Railway
 ```
 
 ---
 
-## Quick Start (Local Development)
+## Quick Start
 
 ### Prerequisites
 - Node.js v20 or v22
@@ -54,17 +54,27 @@ npx vite --host
 
 ### 4. Environment variables
 
-**`client/.env.local`**
+Create `client/.env.local`:
 ```
 VITE_WS_URL=ws://localhost:8080
 VITE_CONTROLLER_URL=http://localhost:5173
 ```
 
-For phone testing on local network replace with your machine's IP:
+For phone testing on a local network, replace with your machine's IP:
 ```
 VITE_WS_URL=ws://192.168.1.XXX:8080
 VITE_CONTROLLER_URL=http://192.168.1.XXX:5173
 ```
+
+---
+
+## How It Works
+
+1. Host opens `/screen` on a laptop or TV — a room code and QR code are generated
+2. Players scan the QR code or visit `/controller` and enter the room code on their phones
+3. Each phone becomes a controller — layout switches automatically based on the active game
+4. The game runs on the shared screen, inputs from phones are relayed in real-time via WebSocket
+5. Game results are recorded on-chain via Solana
 
 ---
 
@@ -73,29 +83,21 @@ VITE_CONTROLLER_URL=http://192.168.1.XXX:5173
 | URL | Device | Description |
 |-----|--------|-------------|
 | `/` | Any | Landing page |
-| `/screen` | Laptop / TV | Host screen — lobby + Unity game |
+| `/screen` | Laptop / TV | Host screen — lobby + game |
 | `/controller` | Phone | Enter room code manually |
 | `/controller/:roomCode` | Phone | Active controller |
 
 ---
 
-## Architecture
+## Controller Layouts
 
-```
-Phone (Controller)
-    │
-    │  WebSocket (JSON)
-    ▼
-Backend (Railway)          ←──── WebSocket (JSON) ────── Host Screen (Vercel /screen)
-    │                                                           │
-    │  relay inputs to host                                     │  postMessage
-    │  broadcast state to phones                                ▼
-    │                                                     Unity WebGL iframe
-    └──────────────────────────────────────────────────────────►│
-                                                                │  window.parent.postMessage
-                                                                ▼
-                                                         React (GameOverlay)
-```
+| Game | Layout | Input Type |
+|------|--------|------------|
+| Lobby | Color picker + Ready button | Left/Right tap + Ready tap |
+| CrossingRoad | Full D-pad | Held directional |
+| HeadSmash | Left/Right + Jump | Held left/right + Jump tap |
+| UFOEscape | Single big button | Mash tap |
+| FlappyGame | Single big button | Tap to flap |
 
 ---
 
@@ -104,7 +106,6 @@ Backend (Railway)          ←──── WebSocket (JSON) ────── H
 ### Phone → Server
 ```json
 { "type": "join",  "roomCode": "ABCD" }
-{ "type": "join",  "roomCode": "ABCD", "sessionToken": "..." }
 { "type": "move",  "direction": "up" }
 { "type": "move",  "direction": "none" }
 { "type": "jump" }
@@ -119,12 +120,10 @@ Backend (Railway)          ←──── WebSocket (JSON) ────── H
 { "type": "playerLeft",   "playerIndex": 0 }
 { "type": "gameInfo",     "game": "CrossingRoad" }
 { "type": "state",        "scores": [0, 0], "timer": 60, "round": "active" }
-{ "type": "state",        "alive": [true, false] }
 { "type": "roundOver",    "winner": 1 }
-{ "type": "error",        "message": "Room not found" }
 ```
 
-### Host Screen → Server
+### Host → Server
 ```json
 { "type": "host",      "roomCode": "ABCD" }
 { "type": "gameInfo",  "game": "CrossingRoad" }
@@ -132,7 +131,7 @@ Backend (Railway)          ←──── WebSocket (JSON) ────── H
 { "type": "roundOver", "winner": 1 }
 ```
 
-### Server → Host Screen
+### Server → Host
 ```json
 { "type": "roomCreated",  "roomCode": "ABCD" }
 { "type": "playerJoined", "playerIndex": 0, "playerCount": 1 }
@@ -145,97 +144,16 @@ Backend (Railway)          ←──── WebSocket (JSON) ────── H
 
 ---
 
-## Controller Layouts
-
-| Game | Layout | Input Type |
-|------|--------|------------|
-| Lobby | Color picker + Ready button | Left/Right tap + Ready tap |
-| CrossingRoad | Full D-pad | Held directional |
-| HeadSmash | Left/Right + Jump | Held left/right + Jump tap |
-| UFOEscape | Single big button | Mash tap |
-| FlappyGame | Single big button | Tap to flap |
-
-Controller layout switches automatically when Unity broadcasts `gameInfo`.
-
----
-
-## Unity Integration (For Oghenerukevwe)
-
-### Setup
-Drop the Unity WebGL build output into:
-```
-client/public/unity/
-```
-React mounts it at `/unity/index.html` inside a full-screen `<iframe>`.
-
-### Unity → React (send game state)
-In your Unity `.jslib` file:
-```javascript
-SendToReact: function(msgPtr) {
-  var msg = UTF8ToString(msgPtr);
-  window.parent.postMessage(JSON.parse(msg), "*");
-}
-```
-
-Call from C# like:
-```csharp
-[DllImport("__Internal")]
-private static extern void SendToReact(string msg);
-
-// Examples:
-SendToReact("{\"type\":\"gameInfo\",\"game\":\"CrossingRoad\"}");
-SendToReact("{\"type\":\"state\",\"scores\":[30,50],\"timer\":45,\"round\":\"active\"}");
-SendToReact("{\"type\":\"state\",\"alive\":[true,false]}");
-SendToReact("{\"type\":\"roundOver\",\"winner\":1}");
-```
-
-### React → Unity (receive player inputs)
-In your `.jslib`, listen for postMessages from React:
-```javascript
-RegisterInputListener: function() {
-  window.addEventListener("message", function(event) {
-    if (event.data && event.data.type === "input") {
-      // Send to Unity C# via SendMessage
-      SendMessage("GameManager", "OnInputReceived", JSON.stringify(event.data));
-    }
-  });
-}
-```
-
-Input message shape React sends to Unity:
-```json
-{ "type": "input", "inputType": "move",  "playerIndex": 0, "direction": "up" }
-{ "type": "input", "inputType": "move",  "playerIndex": 0, "direction": "none" }
-{ "type": "input", "inputType": "jump",  "playerIndex": 1 }
-{ "type": "input", "inputType": "tap",   "playerIndex": 0 }
-{ "type": "input", "inputType": "ready", "playerIndex": 1 }
-```
-
-### Game Flow
-1. Unity WebGL loads inside the React iframe
-2. React lobby waits for both players to ready up
-3. Unity sends `gameInfo` → React hides lobby, shows game overlay, phones switch controller layout
-4. Players send inputs → React relays to Unity via postMessage
-5. Unity sends `state` updates → React updates score/timer overlay + broadcasts to phones
-6. Unity sends `roundOver` → React shows winner announcement + broadcasts to phones
-7. On-chain calls (SOAR, NFT) go through your separate backend — not React
-
-### Reset
-When React sends `{ "type": "reset" }` to Unity iframe, reset the game state for a new round.
-
----
-
 ## Deployment
 
 ### Backend → Railway
 - Root directory: `/backend`
 - Start command: `npx tsx src/index.ts`
 - Environment variable: `PORT=8080`
-- Live URL: `wss://playlana-production.up.railway.app`
 
 ### Client → Vercel
 - Root directory: `client`
-- Framework: Vite
+- Framework preset: Vite
 - Build command: `npm run build`
 - Output directory: `dist`
 - Environment variables:
@@ -243,15 +161,6 @@ When React sends `{ "type": "reset" }` to Unity iframe, reset the game state for
   VITE_WS_URL=wss://playlana-production.up.railway.app
   VITE_CONTROLLER_URL=https://play-lana.vercel.app
   ```
-
----
-
-## Team
-
-| Role | Name |
-|------|------|
-| Frontend / Real-time Web | Emmy |
-| Game Dev / Solana / Smart Contracts | Oghenerukevwe |
 
 ---
 
@@ -267,6 +176,12 @@ When React sends `{ "type": "reset" }` to Unity iframe, reset the game state for
 | On-chain data | Helius DAS API + Webhooks |
 | Frontend hosting | Vercel |
 | Backend hosting | Railway |
+
+---
+
+## License
+
+MIT
 
 ---
 
