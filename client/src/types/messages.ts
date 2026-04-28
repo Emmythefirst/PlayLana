@@ -78,4 +78,6 @@ export type UnityToReact =
 
 // React → Unity (postMessage to Unity iframe contentWindow)
 export type ReactToUnity =
-  | { type: "input"; inputType: "move" | "jump" | "tap" | "ready"; playerIndex: number; direction?: Direction };
+  | { type: "input"; inputType: "move" | "jump" | "tap" | "ready"; playerIndex: number; direction?: Direction }
+  | { type: "startCharacterSelect"; playerCount: number }
+  | { type: "reset" };

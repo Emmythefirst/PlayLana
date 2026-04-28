@@ -30,6 +30,13 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const [hostState, setHostState] = useState<HostState>(INITIAL_STATE(roomCode));
   const registeredRef = useRef(false);
 
+  const sendStartToUnity = useCallback(() => {
+  unityIframeRef.current?.contentWindow?.postMessage(
+    { type: "startCharacterSelect", playerCount: 2 },
+    "*"
+  );
+}, [unityIframeRef]);
+
   const onServerMessage = useCallback(
     (msg: InboundHostMsg) => {
       switch (msg.type) {
@@ -53,6 +60,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           break;
 
         case "input": {
+          // Relay all inputs to Unity
           const unityMsg: ReactToUnity = {
             type: "input",
             inputType: msg.inputType,
@@ -61,11 +69,17 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           };
           unityIframeRef.current?.contentWindow?.postMessage(unityMsg, "*");
 
+          // Track ready state and send start signal when all players ready
           if (msg.inputType === "ready") {
             setHostState((s) => {
               const players = [...s.players] as HostState["players"];
               if (players[msg.playerIndex]) {
                 players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
+              }
+              const allReady = players.every((p) => p.joined && p.ready);
+              if (allReady) {
+                // Small delay to let React state settle before telling Unity to start
+                setTimeout(() => sendStartToUnity(), 500);
               }
               return { ...s, players };
             });
@@ -78,11 +92,12 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           break;
       }
     },
-    [unityIframeRef]
+    [unityIframeRef, sendStartToUnity]
   );
 
   const { send, connected } = useWebSocket<InboundHostMsg, OutboundHostMsg>(onServerMessage);
 
+  // Register as host on connect, re-register on reconnect
   useEffect(() => {
     if (connected && !registeredRef.current) {
       const t = setTimeout(() => {
@@ -96,6 +111,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     }
   }, [connected, send, roomCode]);
 
+  // Handle postMessages from Unity
   useEffect(() => {
     const handleUnityMessage = (event: MessageEvent) => {
       const msg = event.data as UnityToReact;
