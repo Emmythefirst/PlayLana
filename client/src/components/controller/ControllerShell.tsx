@@ -3,6 +3,7 @@ import { LobbyController } from "./layouts/LobbyController";
 import { DpadController } from "./layouts/DpadController";
 import { HeadSmashController } from "./layouts/HeadSmashController";
 import { TapController } from "./layouts/TapController";
+import { CharacterSelectController } from "./layouts/CharacterSelectController";
 
 interface Props {
   state: ControllerState;
@@ -16,7 +17,7 @@ interface Props {
 export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady }: Props) {
   const { playerIndex, currentGame, scores, timer, round, alive, winner } = state;
   const myIndex = playerIndex ?? 0;
-  const isLandscape = currentGame !== "Lobby";
+  const isLandscape = currentGame !== "Lobby" && currentGame !== "CharacterSelect";
 
   return (
     <div
@@ -48,15 +49,17 @@ export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady
           )}
         </div>
 
-        {/* Score */}
-        <div style={{ display: "flex", flexDirection: isLandscape ? "column" : "row", gap: isLandscape ? "0.5rem" : "1rem", alignItems: "center" }}>
-          <Score value={scores[0]} active={myIndex === 0} />
-          <span style={{ color: "#333", fontSize: "0.7rem" }}>vs</span>
-          <Score value={scores[1]} active={myIndex === 1} />
-        </div>
+        {/* Score — hide during lobby and character select */}
+        {currentGame !== "Lobby" && currentGame !== "CharacterSelect" && (
+          <div style={{ display: "flex", flexDirection: isLandscape ? "column" : "row", gap: isLandscape ? "0.5rem" : "1rem", alignItems: "center" }}>
+            <Score value={scores[0]} active={myIndex === 0} />
+            <span style={{ color: "#333", fontSize: "0.7rem" }}>vs</span>
+            <Score value={scores[1]} active={myIndex === 1} />
+          </div>
+        )}
 
         {/* Timer */}
-        {timer !== null && (
+        {timer !== null && currentGame !== "Lobby" && currentGame !== "CharacterSelect" && (
           <div style={{
             fontSize: "0.85rem", fontWeight: 700,
             color: timer <= 10 ? "#ef4444" : "#fff",
@@ -114,7 +117,22 @@ function GameLayout({
 }) {
   switch (game) {
     case "Lobby":
-      return <LobbyController playerIndex={myIndex} onMove={onMove} onReady={onReady} isReady={isReady} />;
+      return (
+        <LobbyController
+          playerIndex={myIndex}
+          onMove={onMove}
+          onReady={onReady}
+          isReady={isReady}
+        />
+      );
+    case "CharacterSelect":
+      return (
+        <CharacterSelectController
+          playerIndex={myIndex}
+          onMove={onMove}
+          onConfirm={onReady}
+        />
+      );
     case "CrossingRoad":
       return <DpadController onMove={onMove} />;
     case "HeadSmash":
@@ -130,9 +148,15 @@ function GameLayout({
 
 function PlayerDot({ index }: { index: number }) {
   const colors = ["#3b82f6", "#f59e0b"];
-  return <div style={{ width: 10, height: 10, borderRadius: "50%", background: colors[index] ?? "#888", flexShrink: 0 }} />;
+  return (
+    <div style={{ width: 10, height: 10, borderRadius: "50%", background: colors[index] ?? "#888", flexShrink: 0 }} />
+  );
 }
 
 function Score({ value, active }: { value: number; active: boolean }) {
-  return <span style={{ fontSize: "1rem", fontWeight: 700, color: active ? "#fff" : "#555" }}>{value}</span>;
+  return (
+    <span style={{ fontSize: "1rem", fontWeight: 700, color: active ? "#fff" : "#555" }}>
+      {value}
+    </span>
+  );
 }

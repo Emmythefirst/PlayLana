@@ -2,6 +2,7 @@ export type Direction = "up" | "down" | "left" | "right" | "none";
 
 export type GameName =
   | "Lobby"
+  | "CharacterSelect"
   | "CrossingRoad"
   | "HeadSmash"
   | "UFOEscape"
@@ -9,7 +10,7 @@ export type GameName =
 
 export type RoundState = "waiting" | "active" | "over";
 
-// ─── Messages phone sends TO server ─────────────────────────────────────────
+// ─── Phone → Server ──────────────────────────────────────────────────────────
 export type OutboundPhoneMsg =
   | { type: "join"; roomCode: string; sessionToken?: string }
   | { type: "move"; direction: Direction }
@@ -17,7 +18,7 @@ export type OutboundPhoneMsg =
   | { type: "tap" }
   | { type: "ready" };
 
-// ─── Messages server sends TO phone ─────────────────────────────────────────
+// ─── Server → Phone ──────────────────────────────────────────────────────────
 export type InboundPhoneMsg =
   | { type: "joined"; playerIndex: number; sessionToken: string }
   | { type: "playerJoined"; playerCount: number }
@@ -27,14 +28,14 @@ export type InboundPhoneMsg =
   | { type: "roundOver"; winner: number }
   | { type: "error"; message: string };
 
-// ─── Messages host screen sends TO server ────────────────────────────────────
+// ─── Host Screen → Server ────────────────────────────────────────────────────
 export type OutboundHostMsg =
   | { type: "host"; roomCode: string }
   | { type: "gameInfo"; game: GameName }
   | { type: "state"; scores?: number[]; timer?: number; round?: RoundState; alive?: boolean[] }
   | { type: "roundOver"; winner: number };
 
-// ─── Messages server sends TO host screen ────────────────────────────────────
+// ─── Server → Host Screen ────────────────────────────────────────────────────
 export type InboundHostMsg =
   | { type: "roomCreated"; roomCode: string }
   | { type: "input"; inputType: "move" | "jump" | "tap" | "ready"; playerIndex: number; direction?: Direction }
@@ -42,7 +43,7 @@ export type InboundHostMsg =
   | { type: "playerLeft"; playerIndex: number; playerCount: number }
   | { type: "error"; message: string };
 
-// ─── Controller state (derived from server messages) ─────────────────────────
+// ─── Controller state ─────────────────────────────────────────────────────────
 export interface ControllerState {
   playerIndex: number | null;
   currentGame: GameName;
@@ -53,7 +54,7 @@ export interface ControllerState {
   winner: number | null;
 }
 
-// ─── Host screen state (derived from server messages + Unity postMessages) ───
+// ─── Host screen state ────────────────────────────────────────────────────────
 export interface PlayerSlot {
   joined: boolean;
   ready: boolean;
@@ -69,14 +70,12 @@ export interface HostState {
   winner: number | null;
 }
 
-// ─── Unity ↔ React postMessage protocol ─────────────────────────────────────
-// Unity → React (window.postMessage from Unity iframe)
+// ─── Unity ↔ React postMessage protocol ──────────────────────────────────────
 export type UnityToReact =
   | { type: "gameInfo"; game: GameName }
   | { type: "state"; scores?: number[]; timer?: number; round?: RoundState; alive?: boolean[] }
   | { type: "roundOver"; winner: number };
 
-// React → Unity (postMessage to Unity iframe contentWindow)
 export type ReactToUnity =
   | { type: "input"; inputType: "move" | "jump" | "tap" | "ready"; playerIndex: number; direction?: Direction }
   | { type: "startCharacterSelect"; playerCount: number }
