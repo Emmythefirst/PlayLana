@@ -20,9 +20,13 @@ export default function ControllerPage() {
     if (!roomCode) navigate("/controller");
   }, [roomCode, navigate]);
 
-  // Join room as soon as WebSocket connects
+  // Join room as soon as WebSocket connects; re-join after any reconnect
   useEffect(() => {
-    if (connected && !hasJoined.current && safeRoomCode) {
+    if (!connected) {
+      hasJoined.current = false;
+      return;
+    }
+    if (!hasJoined.current && safeRoomCode) {
       join();
       hasJoined.current = true;
     }

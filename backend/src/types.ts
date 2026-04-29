@@ -3,6 +3,7 @@ export type Direction = "up" | "down" | "left" | "right" | "none";
 
 export type GameName =
   | "Lobby"
+  | "CharacterSelect"
   | "CrossingRoad"
   | "HeadSmash"
   | "UFOEscape"

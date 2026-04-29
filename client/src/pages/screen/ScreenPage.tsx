@@ -10,7 +10,7 @@ const UNITY_BUILD_URL = "/unity/index.html";
 
 export default function ScreenPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { hostState, connected } = useHostWS(iframeRef);
+  const { hostState, connected, resetRound } = useHostWS(iframeRef);
 
   const { currentGame, round, winner, scores } = hostState;
   const gameStarted = currentGame !== "Lobby";
@@ -43,6 +43,7 @@ export default function ScreenPage() {
         scores={scores}
         onDismiss={() => {
           iframeRef.current?.contentWindow?.postMessage({ type: "reset" }, "*");
+          resetRound();
         }}
       />
     )}

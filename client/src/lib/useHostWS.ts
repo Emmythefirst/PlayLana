@@ -140,10 +140,19 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     }
   }, [connected, send, roomCode]);
 
+  const resetRound = useCallback(() => {
+    setHostState((s) => ({ ...s, round: "waiting", winner: null }));
+  }, []);
+
   // Handle postMessages from Unity
   useEffect(() => {
     const handleUnityMessage = (event: MessageEvent) => {
-      const msg = event.data as UnityToReact;
+      // Unity jslib may send a JSON string or a parsed object — handle both
+      let raw = event.data;
+      if (typeof raw === "string") {
+        try { raw = JSON.parse(raw); } catch { return; }
+      }
+      const msg = raw as UnityToReact;
       if (!msg?.type) return;
 
       switch (msg.type) {
@@ -185,5 +194,5 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     return () => stopRetrying();
   }, [stopRetrying]);
 
-  return { hostState, connected };
+  return { hostState, connected, resetRound };
 }
