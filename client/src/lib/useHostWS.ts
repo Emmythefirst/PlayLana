@@ -30,13 +30,35 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const [hostState, setHostState] = useState<HostState>(INITIAL_STATE(roomCode));
   const registeredRef = useRef(false);
 
-  const sendStartToUnity = useCallback(() => {
-  unityIframeRef.current?.contentWindow?.postMessage(
-    { type: "startCharacterSelect", playerCount: 2 },
-    "*"
-  );
-}, [unityIframeRef]);
+  // Retry interval — keeps sending startCharacterSelect until Unity confirms
+  const startIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const stopRetrying = useCallback(() => {
+    if (startIntervalRef.current) {
+      clearInterval(startIntervalRef.current);
+      startIntervalRef.current = null;
+    }
+  }, []);
+
+  const sendStartToUnity = useCallback(() => {
+    // Stop any existing retry loop
+    stopRetrying();
+
+    const doSend = () => {
+      console.log("[React] Sending startCharacterSelect to Unity iframe");
+      console.log("[React] iframe ref:", unityIframeRef.current);
+      unityIframeRef.current?.contentWindow?.postMessage(
+        { type: "startCharacterSelect", playerCount: 2 },
+        "*"
+      );
+    };
+
+    // Send immediately then retry every 1.5s until Unity responds
+    doSend();
+    startIntervalRef.current = setInterval(doSend, 1500);
+  }, [unityIframeRef, stopRetrying]);
+
+  // ── Handle messages from WS server ────────────────────────────────────────
   const onServerMessage = useCallback(
     (msg: InboundHostMsg) => {
       switch (msg.type) {
@@ -69,21 +91,27 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           };
           unityIframeRef.current?.contentWindow?.postMessage(unityMsg, "*");
 
-          // Track ready state and send start signal when all players ready
+          // Track ready state
           if (msg.inputType === "ready") {
-        setHostState((s) => {
-          const players = [...s.players] as HostState["players"];
-          if (players[msg.playerIndex]) {
-          players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
-         }
-         // Check if all joined players are ready
-           const joinedPlayers = players.filter((p) => p.joined);
-           const allJoinedReady = joinedPlayers.length > 0 && joinedPlayers.every((p) => p.ready);
-           if (allJoinedReady) {
-           setTimeout(() => sendStartToUnity(), 500);
-          }
-         return { ...s, players };
-      });
+            setHostState((s) => {
+              const players = [...s.players] as HostState["players"];
+              if (players[msg.playerIndex]) {
+                players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
+              }
+
+              // Require BOTH players to be joined AND ready before starting
+              const bothJoined = players.every((p) => p.joined);
+              const bothReady = players.every((p) => p.ready);
+
+              console.log(`[React] Player ${msg.playerIndex} ready. bothJoined: ${bothJoined}, bothReady: ${bothReady}`);
+
+              if (bothJoined && bothReady) {
+                console.log("[React] Both players joined and ready — sending startCharacterSelect");
+                setTimeout(() => sendStartToUnity(), 300);
+              }
+
+              return { ...s, players };
+            });
           }
           break;
         }
@@ -120,6 +148,11 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
       switch (msg.type) {
         case "gameInfo":
+          // Unity confirmed character select — stop retrying
+          if (msg.game === "CharacterSelect") {
+            console.log("[React] Unity confirmed CharacterSelect — stopping retry");
+            stopRetrying();
+          }
           setHostState((s) => ({ ...s, currentGame: msg.game }));
           send({ type: "gameInfo", game: msg.game });
           break;
@@ -145,7 +178,12 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
     window.addEventListener("message", handleUnityMessage);
     return () => window.removeEventListener("message", handleUnityMessage);
-  }, [send]);
+  }, [send, stopRetrying]);
+
+  // Cleanup retry interval on unmount
+  useEffect(() => {
+    return () => stopRetrying();
+  }, [stopRetrying]);
 
   return { hostState, connected };
 }
