@@ -71,18 +71,19 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
           // Track ready state and send start signal when all players ready
           if (msg.inputType === "ready") {
-            setHostState((s) => {
-              const players = [...s.players] as HostState["players"];
-              if (players[msg.playerIndex]) {
-                players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
-              }
-              const allReady = players.every((p) => p.joined && p.ready);
-              if (allReady) {
-                // Small delay to let React state settle before telling Unity to start
-                setTimeout(() => sendStartToUnity(), 500);
-              }
-              return { ...s, players };
-            });
+        setHostState((s) => {
+          const players = [...s.players] as HostState["players"];
+          if (players[msg.playerIndex]) {
+          players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
+         }
+         // Check if all joined players are ready
+           const joinedPlayers = players.filter((p) => p.joined);
+           const allJoinedReady = joinedPlayers.length > 0 && joinedPlayers.every((p) => p.ready);
+           if (allJoinedReady) {
+           setTimeout(() => sendStartToUnity(), 500);
+          }
+         return { ...s, players };
+      });
           }
           break;
         }
