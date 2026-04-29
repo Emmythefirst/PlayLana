@@ -32,6 +32,9 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
   // Retry interval — keeps sending startCharacterSelect until Unity confirms
   const startIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Ref to the WS send function — lets sendStartToUnity call it without a
+  // circular dependency (send comes from useWebSocket which is declared below).
+  const wsSendRef = useRef<(p: OutboundHostMsg) => void>(() => {});
 
   const stopRetrying = useCallback(() => {
     if (startIntervalRef.current) {
@@ -41,21 +44,23 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   }, []);
 
   const sendStartToUnity = useCallback(() => {
-    // Stop any existing retry loop
     stopRetrying();
 
     const doSend = () => {
       console.log("[React] Sending startCharacterSelect to Unity iframe");
-      console.log("[React] iframe ref:", unityIframeRef.current);
       unityIframeRef.current?.contentWindow?.postMessage(
         { type: "startCharacterSelect", playerCount: 2 },
         "*"
       );
     };
 
-    // Send immediately then retry every 1.5s until Unity responds
     doSend();
     startIntervalRef.current = setInterval(doSend, 1500);
+
+    // Don't wait for Unity to confirm — switch to CharacterSelect immediately.
+    // If Unity later sends gameInfo: CharacterSelect it becomes a harmless no-op.
+    setHostState((s) => ({ ...s, currentGame: "CharacterSelect" }));
+    wsSendRef.current({ type: "gameInfo", game: "CharacterSelect" });
   }, [unityIframeRef, stopRetrying]);
 
   // ── Handle messages from WS server ────────────────────────────────────────
@@ -125,6 +130,9 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   );
 
   const { send, connected } = useWebSocket<InboundHostMsg, OutboundHostMsg>(onServerMessage);
+
+  // Keep ref in sync so sendStartToUnity always calls the latest send
+  wsSendRef.current = send;
 
   // Register as host on connect, re-register on reconnect
   useEffect(() => {
