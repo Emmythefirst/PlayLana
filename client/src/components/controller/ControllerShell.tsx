@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { ControllerState, Direction, GameName } from "@/types/messages";
 import { LobbyController } from "./layouts/LobbyController";
 import { DpadController } from "./layouts/DpadController";
@@ -18,6 +19,22 @@ export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady
   const { playerIndex, currentGame, scores, timer, round, alive, winner } = state;
   const myIndex = playerIndex ?? 0;
   const isLandscape = currentGame !== "Lobby" && currentGame !== "CharacterSelect";
+
+  // Auto-dismiss winner banner after 3 seconds
+  const [showBanner, setShowBanner] = useState(false);
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    if (round === "over" && winner !== null) {
+      setShowBanner(true);
+      clearTimeout(bannerTimer.current);
+      bannerTimer.current = setTimeout(() => setShowBanner(false), 3000);
+    } else {
+      setShowBanner(false);
+      clearTimeout(bannerTimer.current);
+    }
+    return () => clearTimeout(bannerTimer.current);
+  }, [round, winner]);
 
   return (
     <div
@@ -70,8 +87,8 @@ export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady
         )}
       </div>
 
-      {/* ── Game over banner ── */}
-      {round === "over" && winner !== null && (
+      {/* ── Game over banner — auto-dismisses after 3s ── */}
+      {showBanner && (
         <div style={{
           padding: "0.6rem 1rem", textAlign: "center",
           background: winner === myIndex ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.1)",

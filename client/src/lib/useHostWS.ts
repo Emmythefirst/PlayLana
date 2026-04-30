@@ -30,10 +30,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const [hostState, setHostState] = useState<HostState>(INITIAL_STATE(roomCode));
   const registeredRef = useRef(false);
 
-  // Retry interval — keeps sending startCharacterSelect until Unity confirms
   const startIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Ref to the WS send function — lets sendStartToUnity call it without a
-  // circular dependency (send comes from useWebSocket which is declared below).
   const wsSendRef = useRef<(p: OutboundHostMsg) => void>(() => {});
 
   const stopRetrying = useCallback(() => {
@@ -57,8 +54,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     doSend();
     startIntervalRef.current = setInterval(doSend, 1500);
 
-    // Don't wait for Unity to confirm — switch to CharacterSelect immediately.
-    // If Unity later sends gameInfo: CharacterSelect it becomes a harmless no-op.
     setHostState((s) => ({ ...s, currentGame: "CharacterSelect" }));
     wsSendRef.current({ type: "gameInfo", game: "CharacterSelect" });
   }, [unityIframeRef, stopRetrying]);
@@ -87,7 +82,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           break;
 
         case "input": {
-          // Relay all inputs to Unity
           const unityMsg: ReactToUnity = {
             type: "input",
             inputType: msg.inputType,
@@ -96,7 +90,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           };
           unityIframeRef.current?.contentWindow?.postMessage(unityMsg, "*");
 
-          // Track ready state
           if (msg.inputType === "ready") {
             setHostState((s) => {
               const players = [...s.players] as HostState["players"];
@@ -104,7 +97,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
                 players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
               }
 
-              // Require BOTH players to be joined AND ready before starting
               const bothJoined = players.every((p) => p.joined);
               const bothReady = players.every((p) => p.ready);
 
@@ -131,10 +123,8 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
   const { send, connected } = useWebSocket<InboundHostMsg, OutboundHostMsg>(onServerMessage);
 
-  // Keep ref in sync so sendStartToUnity always calls the latest send
   wsSendRef.current = send;
 
-  // Register as host on connect, re-register on reconnect
   useEffect(() => {
     if (connected && !registeredRef.current) {
       const t = setTimeout(() => {
@@ -148,14 +138,9 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     }
   }, [connected, send, roomCode]);
 
-  const resetRound = useCallback(() => {
-    setHostState((s) => ({ ...s, round: "waiting", winner: null }));
-  }, []);
-
   // Handle postMessages from Unity
   useEffect(() => {
     const handleUnityMessage = (event: MessageEvent) => {
-      // Unity jslib may send a JSON string or a parsed object — handle both
       let raw = event.data;
       if (typeof raw === "string") {
         try { raw = JSON.parse(raw); } catch { return; }
@@ -165,12 +150,17 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
       switch (msg.type) {
         case "gameInfo":
-          // Unity confirmed character select — stop retrying
           if (msg.game === "CharacterSelect") {
             console.log("[React] Unity confirmed CharacterSelect — stopping retry");
             stopRetrying();
           }
-          setHostState((s) => ({ ...s, currentGame: msg.game }));
+          setHostState((s) => ({
+            ...s,
+            currentGame: msg.game,
+            // Reset round and winner when a new game starts
+            round: "waiting",
+            winner: null,
+          }));
           send({ type: "gameInfo", game: msg.game });
           break;
 
@@ -197,10 +187,9 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     return () => window.removeEventListener("message", handleUnityMessage);
   }, [send, stopRetrying]);
 
-  // Cleanup retry interval on unmount
   useEffect(() => {
     return () => stopRetrying();
   }, [stopRetrying]);
 
-  return { hostState, connected, resetRound };
+  return { hostState, connected };
 }
