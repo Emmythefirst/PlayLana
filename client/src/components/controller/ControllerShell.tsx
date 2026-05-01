@@ -137,7 +137,6 @@ function GameLayout({
       return (
         <LobbyController
           playerIndex={myIndex}
-          onMove={onMove}
           onReady={onReady}
           isReady={isReady}
         />
