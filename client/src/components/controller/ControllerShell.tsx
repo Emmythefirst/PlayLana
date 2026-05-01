@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady }: Props) {
-  const { playerIndex, currentGame, scores, timer, round, alive, winner } = state;
+  const { playerIndex, currentGame, timer, round, alive, winner } = state;
   const myIndex = playerIndex ?? 0;
   const isLandscape = currentGame !== "Lobby" && currentGame !== "CharacterSelect";
 
@@ -66,16 +66,7 @@ export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady
           )}
         </div>
 
-        {/* Score — hide during lobby and character select */}
-        {currentGame !== "Lobby" && currentGame !== "CharacterSelect" && (
-          <div style={{ display: "flex", flexDirection: isLandscape ? "column" : "row", gap: isLandscape ? "0.5rem" : "1rem", alignItems: "center" }}>
-            <Score value={scores[0]} active={myIndex === 0} />
-            <span style={{ color: "#333", fontSize: "0.7rem" }}>vs</span>
-            <Score value={scores[1]} active={myIndex === 1} />
-          </div>
-        )}
-
-        {/* Timer */}
+        {/* Timer only — score removed */}
         {timer !== null && currentGame !== "Lobby" && currentGame !== "CharacterSelect" && (
           <div style={{
             fontSize: "0.85rem", fontWeight: 700,
@@ -134,21 +125,9 @@ function GameLayout({
 }) {
   switch (game) {
     case "Lobby":
-      return (
-        <LobbyController
-          playerIndex={myIndex}
-          onReady={onReady}
-          isReady={isReady}
-        />
-      );
+      return <LobbyController playerIndex={myIndex} onReady={onReady} isReady={isReady} />;
     case "CharacterSelect":
-      return (
-        <CharacterSelectController
-          playerIndex={myIndex}
-          onMove={onMove}
-          onConfirm={onReady}
-        />
-      );
+      return <CharacterSelectController playerIndex={myIndex} onMove={onMove} onConfirm={onReady} />;
     case "CrossingRoad":
       return <DpadController onMove={onMove} />;
     case "HeadSmash":
@@ -166,13 +145,5 @@ function PlayerDot({ index }: { index: number }) {
   const colors = ["#3b82f6", "#f59e0b"];
   return (
     <div style={{ width: 10, height: 10, borderRadius: "50%", background: colors[index] ?? "#888", flexShrink: 0 }} />
-  );
-}
-
-function Score({ value, active }: { value: number; active: boolean }) {
-  return (
-    <span style={{ fontSize: "1rem", fontWeight: 700, color: active ? "#fff" : "#555" }}>
-      {value}
-    </span>
   );
 }

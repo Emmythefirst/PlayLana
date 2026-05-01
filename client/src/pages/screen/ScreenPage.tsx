@@ -7,7 +7,7 @@ const UNITY_BUILD_URL = "/unity/index.html";
 
 export default function ScreenPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { hostState, connected } = useHostWS(iframeRef);
+  const { hostState, connected, countdown } = useHostWS(iframeRef);
 
   const { currentGame } = hostState;
   const gameStarted = currentGame !== "Lobby";
@@ -16,7 +16,7 @@ export default function ScreenPage() {
     <div className="screen-root" style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#000", position: "relative" }}>
 
       {/* Lobby — shown until game starts */}
-      {!gameStarted && <LobbyView state={hostState} />}
+      {!gameStarted && <LobbyView state={hostState} countdown={countdown} />}
 
       {/* Unity iframe — ALWAYS mounted so it can receive startCharacterSelect */}
       <iframe

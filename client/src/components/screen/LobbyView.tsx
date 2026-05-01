@@ -3,15 +3,17 @@ import type { HostState } from "@/types/messages";
 
 interface Props {
   state: HostState;
+  countdown: number | null;
 }
 
 const CONTROLLER_URL = import.meta.env.VITE_CONTROLLER_URL ?? window.location.origin;
 
-export function LobbyView({ state }: Props) {
+export function LobbyView({ state, countdown }: Props) {
   const { roomCode, players } = state;
   const joinUrl = `${CONTROLLER_URL}/controller/${roomCode}`;
   const allReady = players.every((p) => p.joined && p.ready);
   const anyJoined = players.some((p) => p.joined);
+  const isCountingDown = countdown !== null;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "3rem 2rem", gap: "3rem" }}>
@@ -28,12 +30,9 @@ export function LobbyView({ state }: Props) {
 
       {/* Room code + QR */}
       <div style={{ display: "flex", gap: "4rem", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-        {/* QR */}
         <div style={{ padding: "1.25rem", background: "#fff", borderRadius: 16 }}>
           <QRCodeSVG value={joinUrl} size={180} />
         </div>
-
-        {/* Code */}
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
             Room Code
@@ -54,15 +53,37 @@ export function LobbyView({ state }: Props) {
         ))}
       </div>
 
-      {/* Status */}
-      <div style={{ textAlign: "center" }}>
-        {!anyJoined && (
+      {/* Status / Countdown */}
+      <div style={{ textAlign: "center", minHeight: 80, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        {isCountingDown ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+            <div style={{
+              width: 80, height: 80,
+              borderRadius: "50%",
+              background: "rgba(59,130,246,0.1)",
+              border: `3px solid ${countdown! <= 3 ? "#ef4444" : "var(--blue)"}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: `0 0 24px ${countdown! <= 3 ? "rgba(239,68,68,0.3)" : "rgba(59,130,246,0.3)"}`,
+              transition: "all 0.3s",
+            }}>
+              <span style={{
+                fontFamily: "var(--font-pixel)",
+                fontSize: "1.8rem",
+                color: countdown! <= 3 ? "#ef4444" : "var(--blue)",
+                transition: "color 0.3s",
+              }}>
+                {countdown}
+              </span>
+            </div>
+            <div style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>
+              Starting in {countdown} second{countdown !== 1 ? "s" : ""}…
+            </div>
+          </div>
+        ) : !anyJoined ? (
           <WaitingDots label="Waiting for players" />
-        )}
-        {anyJoined && !allReady && (
+        ) : !allReady ? (
           <WaitingDots label="Waiting for players to ready up" />
-        )}
-        {allReady && (
+        ) : (
           <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#22c55e" }}>
             ✓ All players ready — starting soon!
           </div>

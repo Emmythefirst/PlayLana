@@ -8,6 +8,8 @@ import type {
   UnityToReact,
 } from "@/types/messages";
 
+const COUNTDOWN_SECONDS = 7;
+
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
@@ -28,9 +30,10 @@ const INITIAL_STATE = (roomCode: string): HostState => ({
 export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | null>) {
   const roomCode = useRef(generateRoomCode()).current;
   const [hostState, setHostState] = useState<HostState>(INITIAL_STATE(roomCode));
+  const [countdown, setCountdown] = useState<number | null>(null);
   const registeredRef = useRef(false);
-
   const startIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wsSendRef = useRef<(p: OutboundHostMsg) => void>(() => {});
 
   const stopRetrying = useCallback(() => {
@@ -40,8 +43,17 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     }
   }, []);
 
+  const stopCountdown = useCallback(() => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setCountdown(null);
+  }, []);
+
   const sendStartToUnity = useCallback(() => {
     stopRetrying();
+    stopCountdown();
 
     const doSend = () => {
       console.log("[React] Sending startCharacterSelect to Unity iframe");
@@ -56,7 +68,25 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
     setHostState((s) => ({ ...s, currentGame: "CharacterSelect" }));
     wsSendRef.current({ type: "gameInfo", game: "CharacterSelect" });
-  }, [unityIframeRef, stopRetrying]);
+  }, [unityIframeRef, stopRetrying, stopCountdown]);
+
+  const startCountdown = useCallback(() => {
+    // Don't start if already counting down
+    if (countdownIntervalRef.current) return;
+
+    setCountdown(COUNTDOWN_SECONDS);
+
+    let remaining = COUNTDOWN_SECONDS;
+    countdownIntervalRef.current = setInterval(() => {
+      remaining -= 1;
+      setCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(countdownIntervalRef.current!);
+        countdownIntervalRef.current = null;
+        sendStartToUnity();
+      }
+    }, 1000);
+  }, [sendStartToUnity]);
 
   // ── Handle messages from WS server ────────────────────────────────────────
   const onServerMessage = useCallback(
@@ -103,8 +133,8 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
               console.log(`[React] Player ${msg.playerIndex} ready. bothJoined: ${bothJoined}, bothReady: ${bothReady}`);
 
               if (bothJoined && bothReady) {
-                console.log("[React] Both players joined and ready — sending startCharacterSelect");
-                setTimeout(() => sendStartToUnity(), 300);
+                console.log("[React] Both players ready — starting 7s countdown");
+                setTimeout(() => startCountdown(), 300);
               }
 
               return { ...s, players };
@@ -118,7 +148,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           break;
       }
     },
-    [unityIframeRef, sendStartToUnity]
+    [unityIframeRef, startCountdown]
   );
 
   const { send, connected } = useWebSocket<InboundHostMsg, OutboundHostMsg>(onServerMessage);
@@ -157,7 +187,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           setHostState((s) => ({
             ...s,
             currentGame: msg.game,
-            // Reset round and winner when a new game starts
             round: "waiting",
             winner: null,
           }));
@@ -187,9 +216,13 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     return () => window.removeEventListener("message", handleUnityMessage);
   }, [send, stopRetrying]);
 
+  // Cleanup on unmount
   useEffect(() => {
-    return () => stopRetrying();
-  }, [stopRetrying]);
+    return () => {
+      stopRetrying();
+      stopCountdown();
+    };
+  }, [stopRetrying, stopCountdown]);
 
-  return { hostState, connected };
+  return { hostState, connected, countdown };
 }
