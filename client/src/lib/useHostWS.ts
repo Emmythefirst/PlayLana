@@ -9,6 +9,7 @@ import type {
 } from "@/types/messages";
 
 const COUNTDOWN_SECONDS = 7;
+const MIN_PLAYERS = 2;
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -17,6 +18,8 @@ function generateRoomCode(): string {
 const INITIAL_STATE = (roomCode: string): HostState => ({
   roomCode,
   players: [
+    { joined: false, ready: false },
+    { joined: false, ready: false },
     { joined: false, ready: false },
     { joined: false, ready: false },
   ],
@@ -35,6 +38,8 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const startIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wsSendRef = useRef<(p: OutboundHostMsg) => void>(() => {});
+  // Track joined player count for sendStartToUnity
+  const joinedCountRef = useRef(0);
 
   const stopRetrying = useCallback(() => {
     if (startIntervalRef.current) {
@@ -55,10 +60,11 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     stopRetrying();
     stopCountdown();
 
+    const playerCount = joinedCountRef.current;
     const doSend = () => {
-      console.log("[React] Sending startCharacterSelect to Unity iframe");
+      console.log(`[React] Sending startCharacterSelect to Unity (${playerCount} players)`);
       unityIframeRef.current?.contentWindow?.postMessage(
-        { type: "startCharacterSelect", playerCount: 2 },
+        { type: "startCharacterSelect", playerCount },
         "*"
       );
     };
@@ -71,7 +77,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   }, [unityIframeRef, stopRetrying, stopCountdown]);
 
   const startCountdown = useCallback(() => {
-    // Don't start if already counting down
     if (countdownIntervalRef.current) return;
 
     setCountdown(COUNTDOWN_SECONDS);
@@ -88,7 +93,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     }, 1000);
   }, [sendStartToUnity]);
 
-  // ── Handle messages from WS server ────────────────────────────────────────
   const onServerMessage = useCallback(
     (msg: InboundHostMsg) => {
       switch (msg.type) {
@@ -99,6 +103,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           setHostState((s) => {
             const players = [...s.players] as HostState["players"];
             players[msg.playerIndex] = { joined: true, ready: false };
+            joinedCountRef.current = players.filter(p => p.joined).length;
             return { ...s, players };
           });
           break;
@@ -107,6 +112,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           setHostState((s) => {
             const players = [...s.players] as HostState["players"];
             players[msg.playerIndex] = { joined: false, ready: false };
+            joinedCountRef.current = players.filter(p => p.joined).length;
             return { ...s, players };
           });
           break;
@@ -127,13 +133,15 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
                 players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
               }
 
-              const bothJoined = players.every((p) => p.joined);
-              const bothReady = players.every((p) => p.ready);
+              // Start countdown when minimum 2 joined players are all ready
+              const joinedPlayers = players.filter((p) => p.joined);
+              const minMet = joinedPlayers.length >= MIN_PLAYERS;
+              const allJoinedReady = minMet && joinedPlayers.every((p) => p.ready);
 
-              console.log(`[React] Player ${msg.playerIndex} ready. bothJoined: ${bothJoined}, bothReady: ${bothReady}`);
+              console.log(`[React] Player ${msg.playerIndex} ready. joined: ${joinedPlayers.length}, allReady: ${allJoinedReady}`);
 
-              if (bothJoined && bothReady) {
-                console.log("[React] Both players ready — starting 7s countdown");
+              if (allJoinedReady) {
+                console.log("[React] Min players ready — starting 7s countdown");
                 setTimeout(() => startCountdown(), 300);
               }
 
@@ -168,7 +176,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     }
   }, [connected, send, roomCode]);
 
-  // Handle postMessages from Unity
   useEffect(() => {
     const handleUnityMessage = (event: MessageEvent) => {
       let raw = event.data;
@@ -216,7 +223,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     return () => window.removeEventListener("message", handleUnityMessage);
   }, [send, stopRetrying]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopRetrying();

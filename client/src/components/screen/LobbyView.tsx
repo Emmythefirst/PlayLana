@@ -8,11 +8,15 @@ interface Props {
 
 const CONTROLLER_URL = import.meta.env.VITE_CONTROLLER_URL ?? window.location.origin;
 
+// 4 player colors
+const PLAYER_COLORS = ["#3b82f6", "#f59e0b", "#22c55e", "#a855f7"];
+
 export function LobbyView({ state, countdown }: Props) {
   const { roomCode, players } = state;
   const joinUrl = `${CONTROLLER_URL}/controller/${roomCode}`;
-  const allReady = players.every((p) => p.joined && p.ready);
-  const anyJoined = players.some((p) => p.joined);
+  const joinedPlayers = players.filter((p) => p.joined);
+  const allJoinedReady = joinedPlayers.length >= 2 && joinedPlayers.every((p) => p.ready);
+  const anyJoined = joinedPlayers.length > 0;
   const isCountingDown = countdown !== null;
 
   return (
@@ -46,8 +50,8 @@ export function LobbyView({ state, countdown }: Props) {
         </div>
       </div>
 
-      {/* Player slots */}
-      <div style={{ display: "flex", gap: "1.5rem" }}>
+      {/* Player slots — all 4 */}
+      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
         {players.map((player, i) => (
           <PlayerSlot key={i} index={i} joined={player.joined} ready={player.ready} />
         ))}
@@ -81,7 +85,7 @@ export function LobbyView({ state, countdown }: Props) {
           </div>
         ) : !anyJoined ? (
           <WaitingDots label="Waiting for players" />
-        ) : !allReady ? (
+        ) : !allJoinedReady ? (
           <WaitingDots label="Waiting for players to ready up" />
         ) : (
           <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#22c55e" }}>
@@ -94,18 +98,17 @@ export function LobbyView({ state, countdown }: Props) {
 }
 
 function PlayerSlot({ index, joined, ready }: { index: number; joined: boolean; ready: boolean }) {
-  const colors = ["#3b82f6", "#f59e0b"];
-  const color = colors[index];
+  const color = PLAYER_COLORS[index];
 
   return (
-    <div style={{ width: 140, padding: "1.25rem", borderRadius: 16, border: `1px solid ${joined ? color + "55" : "var(--border)"}`, background: joined ? `${color}11` : "var(--bg-card)", textAlign: "center", transition: "all 0.3s" }}>
-      <div style={{ width: 48, height: 48, borderRadius: "50%", background: joined ? color : "#222", border: `2px solid ${joined ? color : "#333"}`, margin: "0 auto 0.75rem", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", transition: "all 0.3s" }}>
+    <div style={{ width: 130, padding: "1.1rem", borderRadius: 16, border: `1px solid ${joined ? color + "55" : "var(--border)"}`, background: joined ? `${color}11` : "var(--bg-card)", textAlign: "center", transition: "all 0.3s" }}>
+      <div style={{ width: 44, height: 44, borderRadius: "50%", background: joined ? color : "#222", border: `2px solid ${joined ? color : "#333"}`, margin: "0 auto 0.7rem", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", transition: "all 0.3s" }}>
         {joined ? "🎮" : "?"}
       </div>
-      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: joined ? "#fff" : "#444" }}>
+      <div style={{ fontWeight: 700, fontSize: "0.82rem", color: joined ? "#fff" : "#444" }}>
         Player {index + 1}
       </div>
-      <div style={{ fontSize: "0.7rem", marginTop: "0.3rem", color: ready ? "#22c55e" : joined ? "#666" : "#333" }}>
+      <div style={{ fontSize: "0.68rem", marginTop: "0.3rem", color: ready ? "#22c55e" : joined ? "#666" : "#333" }}>
         {ready ? "✓ Ready" : joined ? "Joined" : "Waiting..."}
       </div>
     </div>

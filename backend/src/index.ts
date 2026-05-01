@@ -18,8 +18,6 @@ import {
 const PORT = Number(process.env.PORT) || 8080;
 const wss = new WebSocketServer({ port: PORT, host: "0.0.0.0" });
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function send(ws: WebSocket, payload: object): void {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
@@ -30,13 +28,10 @@ function generateToken(): string {
   return crypto.randomBytes(16).toString("hex");
 }
 
-// Tag each connection so we know its role and room
 interface TaggedWS extends WebSocket {
   _role?: "host" | "player";
   _roomCode?: string;
 }
-
-// ─── Connection handler ───────────────────────────────────────────────────────
 
 wss.on("connection", (rawWs: WebSocket) => {
   const ws = rawWs as TaggedWS;
@@ -51,7 +46,6 @@ wss.on("connection", (rawWs: WebSocket) => {
       return;
     }
 
-    // ── HOST: create room ─────────────────────────────────────────
     if (msg.type === "host") {
       const { roomCode } = msg;
       if (getRoom(roomCode)) {
@@ -66,7 +60,6 @@ wss.on("connection", (rawWs: WebSocket) => {
       return;
     }
 
-    // ── PHONE: join room ──────────────────────────────────────────
     if (msg.type === "join") {
       const { roomCode, sessionToken } = msg;
       const room = getRoom(roomCode);
@@ -75,7 +68,6 @@ wss.on("connection", (rawWs: WebSocket) => {
         return;
       }
 
-      // Reconnect with existing session token
       if (sessionToken && room.sessionTokens.has(sessionToken)) {
         const playerIndex = room.sessionTokens.get(sessionToken)!;
         room.players[playerIndex] = ws;
@@ -93,7 +85,6 @@ wss.on("connection", (rawWs: WebSocket) => {
         return;
       }
 
-      // New join — find open slot
       const slot = room.players.indexOf(null);
       if (slot === -1) {
         send(ws, { type: "error", message: "Room full" });
@@ -112,11 +103,10 @@ wss.on("connection", (rawWs: WebSocket) => {
         send(room.host, { type: "playerJoined", playerIndex: slot, playerCount: count });
       }
       broadcast(room, { type: "playerJoined", playerCount: count }, ws);
-      console.log(`[ROOM] ${roomCode}: Player ${slot} joined (${count}/2)`);
+      console.log(`[ROOM] ${roomCode}: Player ${slot} joined (${count}/4)`);
       return;
     }
 
-    // ── PHONE INPUT: relay to host ────────────────────────────────
     if (ws._role === "player") {
       const found = getRoomByPlayer(ws);
       if (!found || !found.room.host) return;
@@ -124,7 +114,6 @@ wss.on("connection", (rawWs: WebSocket) => {
       const { room } = found;
       const playerIndex = getPlayerIndex(room, ws);
 
-      // Normalise input type for host
       const inputMsg = (() => {
         if (msg.type === "move")
           return { type: "input", inputType: "move", playerIndex, direction: msg.direction };
@@ -141,7 +130,6 @@ wss.on("connection", (rawWs: WebSocket) => {
       return;
     }
 
-    // ── HOST BROADCAST: relay to all phones ───────────────────────
     if (ws._role === "host") {
       const found = getRoomByHost(ws);
       if (!found) return;
@@ -152,7 +140,6 @@ wss.on("connection", (rawWs: WebSocket) => {
     send(ws, { type: "error", message: "Send 'host' or 'join' first" });
   });
 
-  // ── Disconnect ────────────────────────────────────────────────────────────
   ws.on("close", () => {
     if (ws._role === "host") {
       const code = ws._roomCode!;
@@ -170,14 +157,14 @@ wss.on("connection", (rawWs: WebSocket) => {
       if (!found) return;
       const { code, room } = found;
       const playerIndex = getPlayerIndex(room, ws);
-      room.players[playerIndex] = null; // keep token for reconnect
+      room.players[playerIndex] = null;
 
       const count = playerCount(room);
       if (room.host) {
         send(room.host, { type: "playerLeft", playerIndex, playerCount: count });
       }
       broadcast(room, { type: "playerLeft", playerIndex }, ws);
-      console.log(`[ROOM] ${code}: Player ${playerIndex} disconnected (${count}/2)`);
+      console.log(`[ROOM] ${code}: Player ${playerIndex} disconnected (${count}/4)`);
     }
   });
 

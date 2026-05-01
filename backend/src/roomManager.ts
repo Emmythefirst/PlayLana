@@ -6,7 +6,7 @@ const rooms = new Map<string, Room>();
 export function createRoom(roomCode: string, host: WebSocket): Room {
   const room: Room = {
     host,
-    players: [null, null],
+    players: [null, null, null, null],
     sessionTokens: new Map(),
   };
   rooms.set(roomCode, room);
