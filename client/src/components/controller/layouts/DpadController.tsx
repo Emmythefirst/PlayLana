@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Direction } from "@/types/messages";
 
 interface Props {
@@ -16,109 +16,207 @@ export function DpadController({
   enableLeft = true,
   enableRight = true,
 }: Props) {
-  const [active, setActive] = useState<Direction | null>(null);
+  const leftActive = useRef<Direction | null>(null);
+  const rightActive = useRef<Direction | null>(null);
 
-  const press = useCallback((dir: Direction) => {
-    setActive(dir);
+  // Visual state — separate from input logic
+  const [leftHighlight, setLeftHighlight] = useState<Direction | null>(null);
+  const [rightHighlight, setRightHighlight] = useState<Direction | null>(null);
+
+  const pressLeft = useCallback((dir: Direction) => {
+    leftActive.current = dir;
+    setLeftHighlight(dir);
     navigator.vibrate?.(18);
     onMove(dir);
   }, [onMove]);
 
-  const release = useCallback(() => {
-    setActive(null);
-    onMove("none");
+  const releaseLeft = useCallback(() => {
+    leftActive.current = null;
+    setLeftHighlight(null);
+    onMove(rightActive.current ?? "none");
   }, [onMove]);
 
-  const ARM = 90;   // arm length
-  const THICK = 90; // arm thickness
-  const GAP = 0;
+  const pressRight = useCallback((dir: Direction) => {
+    rightActive.current = dir;
+    setRightHighlight(dir);
+    navigator.vibrate?.(18);
+    onMove(dir);
+  }, [onMove]);
 
-  const armStyle = (dir: Direction, isActive: boolean): React.CSSProperties => ({
-    width: dir === "left" || dir === "right" ? ARM : THICK,
-    height: dir === "up" || dir === "down" ? ARM : THICK,
-    background: isActive ? "#2a2a2a" : "#1a1a1a",
-    border: `2px solid ${isActive ? "#555" : "#2a2a2a"}`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    touchAction: "none",
-    cursor: "pointer",
-    userSelect: "none",
-    transition: "background 0.06s, border-color 0.06s",
-    borderRadius: dir === "up" ? "12px 12px 0 0"
-      : dir === "down" ? "0 0 12px 12px"
-      : dir === "left" ? "12px 0 0 12px"
-      : "0 12px 12px 0",
-  });
+  const releaseRight = useCallback(() => {
+    rightActive.current = null;
+    setRightHighlight(null);
+    onMove(leftActive.current ?? "none");
+  }, [onMove]);
+
+  const ARM = 80;
+  const BASE = "#1a1a1a";
+  const ACTIVE = "#2e2e2e";
+  const BORDER = "#333";
+  const ARROW_COLOR = "#555";
+  const ARROW_ACTIVE = "#fff";
 
   return (
     <div style={{
       display: "flex",
+      flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
+      justifyContent: "space-between",
       height: "100%",
-      padding: "1rem",
+      padding: "1rem 1.25rem",
     }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: GAP }}>
 
-        {/* Up */}
-        {enableUp && (
-          <button
-            onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("up"); }}
-            onPointerUp={release} onPointerCancel={release}
-            style={armStyle("up", active === "up")}
-          >
-            <span style={{ fontSize: "1.8rem", color: active === "up" ? "#fff" : "#555" }}>▲</span>
-          </button>
-        )}
+      {/* ── LEFT: Cross D-pad ── */}
+      <CrossDpad
+        ARM={ARM}
+        BASE={BASE}
+        ACTIVE={ACTIVE}
+        BORDER={BORDER}
+        ARROW_COLOR={ARROW_COLOR}
+        ARROW_ACTIVE={ARROW_ACTIVE}
+        highlight={leftHighlight}
+        enableUp={enableUp}
+        enableDown={enableDown}
+        enableLeft={enableLeft}
+        enableRight={enableRight}
+        onPress={pressLeft}
+        onRelease={releaseLeft}
+      />
 
-        {/* Middle row: left + center + right */}
-        <div style={{ display: "flex", alignItems: "center", gap: GAP }}>
-          {enableLeft && (
-            <button
-              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("left"); }}
-              onPointerUp={release} onPointerCancel={release}
-              style={armStyle("left", active === "left")}
-            >
-              <span style={{ fontSize: "1.8rem", color: active === "left" ? "#fff" : "#555" }}>◀</span>
-            </button>
-          )}
+      {/* ── RIGHT: 4 circular buttons ── */}
+      <CircleDpad
+        BASE={BASE}
+        ACTIVE={ACTIVE}
+        BORDER={BORDER}
+        ARROW_COLOR={ARROW_COLOR}
+        ARROW_ACTIVE={ARROW_ACTIVE}
+        highlight={rightHighlight}
+        enableUp={enableUp}
+        enableDown={enableDown}
+        enableLeft={enableLeft}
+        enableRight={enableRight}
+        onPress={pressRight}
+        onRelease={releaseRight}
+      />
+    </div>
+  );
+}
 
-          {/* Center nub */}
-          <div style={{
-            width: THICK,
-            height: THICK,
-            background: "#111",
-            border: "2px solid #2a2a2a",
+function CrossDpad({ ARM, BASE, ACTIVE, BORDER, ARROW_COLOR, ARROW_ACTIVE, highlight, enableUp, enableDown, enableLeft, enableRight, onPress, onRelease }: any) {
+  const dirs = [
+    { dir: "up" as const,    label: "▲", enabled: enableUp,    pos: { left: ARM, top: 0 },       radius: "14px 14px 0 0" },
+    { dir: "down" as const,  label: "▼", enabled: enableDown,  pos: { left: ARM, top: ARM * 2 }, radius: "0 0 14px 14px" },
+    { dir: "left" as const,  label: "◀", enabled: enableLeft,  pos: { left: 0, top: ARM },        radius: "14px 0 0 14px" },
+    { dir: "right" as const, label: "▶", enabled: enableRight, pos: { left: ARM * 2, top: ARM }, radius: "0 14px 14px 0" },
+  ];
+
+  return (
+    <div style={{ position: "relative", width: ARM * 3, height: ARM * 3, flexShrink: 0 }}>
+      {/* SVG cross background */}
+      <svg style={{ position: "absolute", inset: 0, pointerEvents: "none" }} width={ARM * 3} height={ARM * 3}>
+        <path
+          d={`M${ARM},0 h${ARM} v${ARM} h${ARM} v${ARM} h-${ARM} v${ARM} h-${ARM} v-${ARM} h-${ARM} v-${ARM} h${ARM} Z`}
+          fill={BASE}
+          stroke={BORDER}
+          strokeWidth="2"
+        />
+        {/* Active arm highlight */}
+        {highlight === "up" && <rect x={ARM} y={0} width={ARM} height={ARM} fill={ACTIVE} rx="12" />}
+        {highlight === "down" && <rect x={ARM} y={ARM * 2} width={ARM} height={ARM} fill={ACTIVE} rx="12" />}
+        {highlight === "left" && <rect x={0} y={ARM} width={ARM} height={ARM} fill={ACTIVE} rx="12" />}
+        {highlight === "right" && <rect x={ARM * 2} y={ARM} width={ARM} height={ARM} fill={ACTIVE} rx="12" />}
+      </svg>
+
+      {dirs.map(({ dir, label, enabled, pos, radius }) => enabled && (
+        <button
+          key={dir}
+          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); onPress(dir); }}
+          onPointerUp={() => onRelease()}
+          onPointerCancel={() => onRelease()}
+          style={{
+            position: "absolute",
+            ...pos,
+            width: ARM,
+            height: ARM,
+            background: "transparent",
+            border: "none",
+            borderRadius: radius,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            touchAction: "none",
+            cursor: "pointer",
+            zIndex: 2,
+          }}
+        >
+          <span style={{
+            fontSize: "1.5rem",
+            color: highlight === dir ? ARROW_ACTIVE : ARROW_COLOR,
+            transition: "color 0.07s",
+            pointerEvents: "none",
           }}>
-            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "2px solid #333" }} />
-          </div>
+            {label}
+          </span>
+        </button>
+      ))}
 
-          {enableRight && (
-            <button
-              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("right"); }}
-              onPointerUp={release} onPointerCancel={release}
-              style={armStyle("right", active === "right")}
-            >
-              <span style={{ fontSize: "1.8rem", color: active === "right" ? "#fff" : "#555" }}>▶</span>
-            </button>
-          )}
-        </div>
-
-        {/* Down */}
-        {enableDown && (
-          <button
-            onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("down"); }}
-            onPointerUp={release} onPointerCancel={release}
-            style={armStyle("down", active === "down")}
-          >
-            <span style={{ fontSize: "1.8rem", color: active === "down" ? "#fff" : "#555" }}>▼</span>
-          </button>
-        )}
+      {/* Center nub */}
+      <div style={{
+        position: "absolute",
+        left: ARM, top: ARM,
+        width: ARM, height: ARM,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        pointerEvents: "none", zIndex: 1,
+      }}>
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#2a2a2a", border: `2px solid ${BORDER}` }} />
       </div>
+    </div>
+  );
+}
+
+function CircleDpad({ BASE, ACTIVE, BORDER, ARROW_COLOR, ARROW_ACTIVE, highlight, enableUp, enableDown, enableLeft, enableRight, onPress, onRelease }: any) {
+  const BTN = 80;
+  const GAP = 10;
+
+  const BtnCircle = ({ dir, label, enabled }: { dir: "up" | "down" | "left" | "right"; label: string; enabled: boolean }) => {
+    if (!enabled) return <div style={{ width: BTN, height: BTN }} />;
+    const isActive = highlight === dir;
+    return (
+      <button
+        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); onPress(dir); }}
+        onPointerUp={() => onRelease()}
+        onPointerCancel={() => onRelease()}
+        style={{
+          width: BTN, height: BTN,
+          borderRadius: "50%",
+          border: `2px solid ${isActive ? "#555" : BORDER}`,
+          background: isActive ? ACTIVE : BASE,
+          fontSize: "1.4rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          touchAction: "none",
+          cursor: "pointer",
+          userSelect: "none",
+          transition: "background 0.07s, border-color 0.07s",
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ color: isActive ? ARROW_ACTIVE : ARROW_COLOR, transition: "color 0.07s" }}>
+          {label}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: GAP, flexShrink: 0 }}>
+      <BtnCircle dir="up" label="▲" enabled={enableUp} />
+      <div style={{ display: "flex", gap: GAP }}>
+        <BtnCircle dir="left" label="◀" enabled={enableLeft} />
+        <BtnCircle dir="right" label="▶" enabled={enableRight} />
+      </div>
+      <BtnCircle dir="down" label="▼" enabled={enableDown} />
     </div>
   );
 }
