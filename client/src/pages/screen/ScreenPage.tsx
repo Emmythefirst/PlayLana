@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import { useHostWS } from "@/lib/useHostWS";
 import { LobbyView } from "@/components/screen/LobbyView";
-import { GameOverlay } from "@/components/screen/GameOverlay";
 
 const UNITY_BUILD_URL = "/unity/index.html";
 
@@ -31,9 +30,6 @@ export default function ScreenPage() {
           display: gameStarted ? "block" : "none",
         }}
       />
-
-      {/* Score/timer overlay on top of Unity */}
-      {gameStarted && <GameOverlay state={hostState} />}
 
       {/* WS disconnected pill */}
       {!connected && (

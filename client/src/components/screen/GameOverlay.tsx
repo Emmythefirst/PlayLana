@@ -62,11 +62,6 @@ export function GameOverlay({ state }: Props) {
 
         <ScoreCard playerIndex={1} score={scores[1]} name={players[1].joined ? "P2" : "—"} />
       </div>
-
-      {/* Round state banner — bottom */}
-      {round === "waiting" && (
-        <div style={bannerStyle("#3b82f6")}>GET READY…</div>
-      )}
     </div>
   );
 }
@@ -112,16 +107,3 @@ function ScoreCard({ playerIndex, score, name }: { playerIndex: number; score: n
     </div>
   );
 }
-
-const bannerStyle = (color: string): React.CSSProperties => ({
-  alignSelf: "center",
-  padding: "0.6rem 2rem",
-  borderRadius: 12,
-  background: `${color}22`,
-  border: `1px solid ${color}55`,
-  backdropFilter: "blur(6px)",
-  fontFamily: "var(--font-pixel)",
-  fontSize: "0.75rem",
-  color,
-  letterSpacing: "0.1em",
-});

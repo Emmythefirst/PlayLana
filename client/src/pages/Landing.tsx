@@ -1,369 +1,485 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaApple, FaGooglePlay, FaInstagram, FaTelegram, FaDiscord } from "react-icons/fa6";
-import { FaXTwitter } from "react-icons/fa6";
+import { FaXTwitter, FaDiscord, FaGithub } from "react-icons/fa6";
 
-const FAQS = [
-  { q: "Do I need to download anything?", a: "No downloads required. PlayLana runs entirely in your browser. Just open the link and start playing." },
-  { q: "How do I join a game?", a: "The host shares a room code or QR code. Open your phone camera, scan it, and you're in — wallet created automatically." },
-  { q: "Can I play with friends?", a: "Yes. Each game supports 2 players using their phones as controllers on a shared screen." },
-  { q: "What devices are supported?", a: "Any device with a modern browser. Host screen on a laptop, TV, or projector. Controllers on any smartphone." },
+const PX = "'Press Start 2P', monospace";
+const YELLOW = "#f5c518";
+const BLUE = "#3b82f6";
+const GREEN = "#22c55e";
+const BG = "#000000";
+const CARD_BG = "#0a0a0a";
+
+const TICKER_ITEMS = [
+  "2-4 PLAYERS","~10 MIN","FIRST TO 5 CROWNS",
+  "PHONE = CONTROLLER","NOW PLAYING: CROWN ROYALE",
+  "FREE · NO DOWNLOAD","BUILT ON SOLANA","4 MINI-GAMES",
+];
+
+const MINI_GAMES = [
+  { name: "CROSSING ROAD", color: GREEN, active: true },
+  { name: "UFO ESCAPE", color: GREEN, active: false },
+  { name: "FLAPPY", color: GREEN, active: false },
+  { name: "HEAD SMASH", color: GREEN, active: false },
 ];
 
 const SOCIALS = [
-  { icon: <FaInstagram size={15} />, label: "Instagram", href: "#" },
-  { icon: <FaTelegram size={15} />, label: "Telegram", href: "#" },
-  { icon: <FaDiscord size={15} />, label: "Discord", href: "#" },
-  { icon: <FaXTwitter size={15} />, label: "X", href: "#" },
+  { icon: <FaXTwitter size={14} />, label: "X", href: "#" },
+  { icon: <FaDiscord size={14} />, label: "Discord", href: "#" },
+  { icon: <FaGithub size={14} />, label: "GitHub", href: "#" },
 ];
 
-const PX = "'Press Start 2P', monospace";
+// ── Pixel art SVG components ─────────────────────────────────────────────────
 
+// Hero illustration — TV with crown + two phones, empty screen for screenshot
+function PixelHeroIllustration() {
+  return (
+    <svg viewBox="0 0 200 160" style={{ width: "100%", maxWidth: 520, imageRendering: "pixelated" }}>
+      {/* ── Crown above TV ── */}
+      <rect x="84" y="4" width="4" height="8" fill={YELLOW} />
+      <rect x="96" y="2" width="4" height="10" fill={YELLOW} />
+      <rect x="108" y="4" width="4" height="8" fill={YELLOW} />
+      <rect x="82" y="12" width="32" height="6" fill={YELLOW} />
+      <rect x="80" y="18" width="36" height="4" fill={YELLOW} />
+
+      {/* ── TV / Monitor body ── */}
+      <rect x="36" y="28" width="124" height="86" fill={BLUE} />
+      <rect x="40" y="32" width="116" height="78" fill="#0a0a14" />
+
+      {/* TV screen — empty dark area for screenshot overlay */}
+      <rect x="44" y="36" width="108" height="70" fill="#050510" id="tv-screen" />
+
+      {/* Scan line effect */}
+      <rect x="44" y="56" width="108" height="1" fill={BLUE} opacity="0.15" />
+      <rect x="44" y="76" width="108" height="1" fill={BLUE} opacity="0.15" />
+      <rect x="44" y="96" width="108" height="1" fill={BLUE} opacity="0.15" />
+
+      {/* TV stand */}
+      <rect x="90" y="114" width="16" height="8" fill={BLUE} />
+      <rect x="76" y="122" width="44" height="6" fill={BLUE} />
+
+      {/* TV pixel corner accents */}
+      <rect x="36" y="28" width="6" height="6" fill={YELLOW} />
+      <rect x="154" y="28" width="6" height="6" fill={YELLOW} />
+      <rect x="36" y="108" width="6" height="6" fill={YELLOW} />
+      <rect x="154" y="108" width="6" height="6" fill={YELLOW} />
+
+      {/* ── Phone left ── */}
+      <rect x="6" y="60" width="26" height="46" fill={BLUE} />
+      <rect x="10" y="64" width="18" height="34" fill="#050510" />
+      {/* Phone screen content dots */}
+      <rect x="12" y="68" width="4" height="4" fill={GREEN} />
+      <rect x="18" y="68" width="4" height="4" fill={GREEN} />
+      <rect x="12" y="76" width="10" height="2" fill={BLUE} opacity="0.6" />
+      <rect x="12" y="80" width="8" height="2" fill={BLUE} opacity="0.4" />
+      {/* D-pad */}
+      <rect x="13" y="86" width="4" height="8" fill={YELLOW} />
+      <rect x="11" y="88" width="8" height="4" fill={YELLOW} />
+      <rect x="22" y="90" width="4" height="4" fill={YELLOW} />
+      {/* Phone button */}
+      <rect x="14" y="100" width="8" height="2" fill="#333" />
+
+      {/* ── Phone right ── */}
+      <rect x="164" y="60" width="26" height="46" fill={BLUE} />
+      <rect x="168" y="64" width="18" height="34" fill="#050510" />
+      {/* Phone screen content */}
+      <rect x="170" y="68" width="4" height="4" fill={GREEN} />
+      <rect x="176" y="68" width="4" height="4" fill={GREEN} />
+      <rect x="170" y="76" width="10" height="2" fill={BLUE} opacity="0.6" />
+      <rect x="170" y="80" width="8" height="2" fill={BLUE} opacity="0.4" />
+      {/* D-pad */}
+      <rect x="171" y="86" width="4" height="8" fill={YELLOW} />
+      <rect x="169" y="88" width="8" height="4" fill={YELLOW} />
+      <rect x="178" y="90" width="4" height="4" fill={YELLOW} />
+      <rect x="172" y="100" width="8" height="2" fill="#333" />
+
+      {/* ── Pixel dots scattered ── */}
+      <rect x="2" y="30" width="3" height="3" fill={YELLOW} opacity="0.6" />
+      <rect x="16" y="42" width="2" height="2" fill={BLUE} opacity="0.5" />
+      <rect x="178" y="26" width="3" height="3" fill={YELLOW} opacity="0.6" />
+      <rect x="190" y="44" width="2" height="2" fill={GREEN} opacity="0.5" />
+      <rect x="4" y="120" width="2" height="2" fill={GREEN} opacity="0.4" />
+      <rect x="188" y="118" width="3" height="3" fill={BLUE} opacity="0.4" />
+
+      {/* ── Connection lines phone to TV ── */}
+      <rect x="32" y="82" width="12" height="2" fill={BLUE} opacity="0.4" />
+      <rect x="152" y="82" width="12" height="2" fill={BLUE} opacity="0.4" />
+    </svg>
+  );
+}
+
+function PixelMonitor() {
+  return (
+    <svg width="72" height="72" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+      <rect x="1" y="1" width="14" height="10" fill={BLUE} />
+      <rect x="2" y="2" width="12" height="8" fill="#000" />
+      <rect x="3" y="3" width="4" height="2" fill={YELLOW} />
+      <rect x="8" y="3" width="4" height="1" fill={BLUE} opacity="0.5" />
+      <rect x="8" y="5" width="3" height="1" fill={BLUE} opacity="0.5" />
+      <rect x="6" y="12" width="4" height="1" fill={BLUE} />
+      <rect x="5" y="13" width="6" height="1" fill={BLUE} />
+    </svg>
+  );
+}
+
+function PixelPhone() {
+  return (
+    <svg width="72" height="72" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+      <rect x="3" y="1" width="7" height="12" fill={GREEN} />
+      <rect x="4" y="2" width="5" height="8" fill="#000" />
+      <rect x="5" y="10" width="3" height="1" fill="#000" />
+      <rect x="4" y="3" width="1" height="1" fill={GREEN} />
+      <rect x="6" y="3" width="1" height="1" fill={GREEN} />
+      <rect x="5" y="4" width="1" height="1" fill={GREEN} />
+      <rect x="7" y="4" width="1" height="1" fill={GREEN} />
+      <rect x="4" y="5" width="1" height="1" fill={GREEN} />
+      <rect x="6" y="6" width="1" height="1" fill={GREEN} />
+      <rect x="11" y="4" width="3" height="1" fill={YELLOW} />
+      <rect x="11" y="5" width="1" height="3" fill={YELLOW} />
+      <rect x="13" y="5" width="1" height="3" fill={YELLOW} />
+      <rect x="11" y="7" width="3" height="1" fill={YELLOW} />
+    </svg>
+  );
+}
+
+function PixelCrown({ size = 64 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+      <rect x="1" y="9" width="14" height="4" fill={YELLOW} />
+      <rect x="1" y="5" width="2" height="4" fill={YELLOW} />
+      <rect x="7" y="3" width="2" height="6" fill={YELLOW} />
+      <rect x="13" y="5" width="2" height="4" fill={YELLOW} />
+      <rect x="2" y="8" width="1" height="1" fill="#000" />
+      <rect x="8" y="8" width="1" height="1" fill="#000" />
+      <rect x="13" y="8" width="1" height="1" fill="#000" />
+      <rect x="2" y="13" width="12" height="1" fill={YELLOW} />
+    </svg>
+  );
+}
+
+function PixelAvatar() {
+  return (
+    <svg width="72" height="72" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+      <rect x="5" y="1" width="6" height="6" fill={BLUE} />
+      <rect x="6" y="3" width="1" height="1" fill="#fff" />
+      <rect x="9" y="3" width="1" height="1" fill="#fff" />
+      <rect x="6" y="5" width="4" height="1" fill="#fff" />
+      <rect x="4" y="7" width="8" height="6" fill={BLUE} />
+      <rect x="3" y="8" width="2" height="4" fill={BLUE} />
+      <rect x="11" y="8" width="2" height="4" fill={BLUE} />
+      <rect x="4" y="13" width="3" height="2" fill={BLUE} />
+      <rect x="9" y="13" width="3" height="2" fill={BLUE} />
+    </svg>
+  );
+}
+
+function PixelTrophy() {
+  return (
+    <svg width="72" height="72" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+      <rect x="4" y="1" width="8" height="8" fill={YELLOW} />
+      <rect x="2" y="2" width="2" height="4" fill={YELLOW} />
+      <rect x="12" y="2" width="2" height="4" fill={YELLOW} />
+      <rect x="5" y="2" width="6" height="6" fill="#b8860b" />
+      <rect x="6" y="3" width="4" height="1" fill={YELLOW} />
+      <rect x="6" y="5" width="4" height="1" fill={YELLOW} />
+      <rect x="6" y="9" width="4" height="3" fill={YELLOW} />
+      <rect x="4" y="12" width="8" height="2" fill={YELLOW} />
+      <rect x="3" y="14" width="10" height="1" fill={YELLOW} />
+    </svg>
+  );
+}
+
+function PixelChart() {
+  return (
+    <svg width="72" height="72" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+      <rect x="2" y="11" width="3" height="4" fill={BLUE} />
+      <rect x="6" y="7" width="3" height="8" fill={YELLOW} />
+      <rect x="10" y="4" width="3" height="11" fill={GREEN} />
+      <rect x="1" y="15" width="14" height="1" fill="#555" />
+    </svg>
+  );
+}
+
+function BlinkCursor({ color = "#fff" }: { color?: string }) {
+  return (
+    <span style={{
+      display: "inline-block", width: 12, height: "1em",
+      background: color, marginLeft: 6, verticalAlign: "middle",
+      animation: "blink 1s step-end infinite",
+    }} />
+  );
+}
+
+function PixelBlink({ color = GREEN }: { color?: string }) {
+  return (
+    <span style={{
+      display: "inline-block", width: 8, height: 8,
+      background: color, marginRight: 6, flexShrink: 0,
+      animation: "blink 0.8s step-end infinite",
+    }} />
+  );
+}
+
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <div style={{ marginBottom: "1.75rem" }}>
+      <span style={{ color: YELLOW, fontFamily: PX, fontSize: "0.6rem", letterSpacing: "0.15em" }}>
+        — [ {text} ]
+      </span>
+    </div>
+  );
+}
+
+function PixelButton({ children, onClick, primary = true, outline = false }: {
+  children: React.ReactNode; onClick?: () => void; primary?: boolean; outline?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        fontFamily: PX, fontSize: "0.65rem",
+        padding: "0.9rem 1.75rem",
+        background: outline ? "transparent" : (primary ? (hovered ? YELLOW : BLUE) : "transparent"),
+        color: outline ? (hovered ? YELLOW : "#fff") : (primary ? "#000" : "#fff"),
+        border: outline ? `2px solid ${hovered ? YELLOW : "#555"}` : "none",
+        cursor: "pointer", letterSpacing: "0.08em", transition: "all 0.1s",
+      }}
+    >
+      {primary && !outline && "► "}{children}
+    </button>
+  );
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function Landing() {
-  const [activeTab, setActiveTab] = useState<"PC" | "TV">("PC");
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const navigate = useNavigate();
+  const tickerText = (TICKER_ITEMS.map(t => `· ${t}   `).join("") + "   ").repeat(3);
 
   return (
-    <div style={{ background: "#1a1a1a", color: "#fff", fontFamily: "'DM Sans', system-ui, sans-serif", minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ background: BG, color: "#fff", fontFamily: PX, minHeight: "100vh", overflowX: "hidden" }}>
 
-      {/* ── Navbar ── */}
-      <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.4rem 3rem", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <Logo />
-        <div style={{ display: "flex", gap: "2.5rem" }}>
-          {["Games", "FAQs"].map((l) => (
-            <a key={l} href={`#${l.toLowerCase()}`} style={{ color: "#e5e5e5", fontFamily: PX, fontSize: "0.7rem", textDecoration: "none" }}>{l}</a>
+      <style>{`
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes scanline { 0%{top:-10%} 100%{top:110%} }
+        *{box-sizing:border-box;margin:0;padding:0}
+        a{text-decoration:none;color:inherit}
+        ::-webkit-scrollbar{width:4px;background:#000}
+        ::-webkit-scrollbar-thumb{background:#333}
+        img{image-rendering:pixelated;image-rendering:crisp-edges}
+      `}</style>
+
+      {/* ── NAV ── */}
+      <nav style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "1.25rem 3rem", borderBottom: `1px solid #111`,
+        position: "sticky", top: 0, background: BG, zIndex: 50,
+      }}>
+        <img src="/playlana-logo.png" alt="PlayLana" style={{ height: 36 }} />
+        <div style={{ display: "flex", gap: "2.5rem", alignItems: "center" }}>
+          {[["How it works","#how-it-works"],["The Game","#the-game"],["Why on-chain","#why-on-chain"]].map(([l,h]) => (
+            <a key={l} href={h} style={{ fontFamily: PX, fontSize: "0.5rem", color: "#888", letterSpacing: "0.08em" }}>{l}</a>
           ))}
         </div>
       </nav>
 
-      {/* ── Hero ── */}
-      <section style={{ textAlign: "center", padding: "6rem 2rem 3rem" }}>
-        <h1 style={{
-          fontFamily: PX,
-          fontSize: "clamp(1.4rem, 3.5vw, 2.6rem)",
-          lineHeight: 1.7,
-          margin: "0 auto 1.75rem",
-          maxWidth: 780,
-          letterSpacing: "0.02em",
-        }}>
-          Turn Any{" "}
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3em", verticalAlign: "middle" }}>
-            <PixelScreenIcon />
-          </span>{" "}
-          Screen Into
-          <br />
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3em", verticalAlign: "middle" }}>
-            <PixelControllerIcon />
-          </span>{" "}
-          a Party Game Console
-        </h1>
-        <p style={{ color: "#888", fontSize: "1rem", maxWidth: 420, margin: "0 auto 2.5rem", lineHeight: 1.9 }}>
-          Play games with friends using your phones as controllers. Just connect and play.
-        </p>
-        <button onClick={() => navigate("/screen")} style={btnPrimary}>
-          Start playing now
-        </button>
-
-        {/* Device mockup stack */}
-        <div style={{ position: "relative", maxWidth: 600, margin: "4rem auto 0", height: 380 }}>
-          <div style={{
-            position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
-            width: "68%", borderRadius: 12, overflow: "hidden",
-            border: "2px solid rgba(255,255,255,0.1)", background: "#111", zIndex: 1,
-            boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
-          }}>
-            <div style={{ height: 22, background: "#0a0a0a", display: "flex", alignItems: "center", paddingLeft: 10, gap: 5, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              {["#ff5f57", "#febc2e", "#28c840"].map(c => <div key={c} style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />)}
-            </div>
-            <div style={{ height: 200, background: "#0d0d0d", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: PX, fontSize: "0.55rem", color: "#222", letterSpacing: "0.1em" }}>GAME SCREEN</span>
-            </div>
+      {/* ── HERO ── */}
+      <section style={{
+        display: "grid", gridTemplateColumns: "1fr 1fr",
+        gap: "4rem", padding: "6rem 3rem 4rem",
+        alignItems: "center", maxWidth: 1200, margin: "0 auto",
+      }}>
+        <div>
+          <h1 style={{ fontFamily: PX, fontSize: "clamp(2rem, 4.5vw, 3.2rem)", lineHeight: 1.7, marginBottom: "2rem" }}>
+            One<br />screen.<br /><span style={{ color: YELLOW }}>Every<br />phone.</span>
+          </h1>
+          <p style={{ fontFamily: PX, fontSize: "0.55rem", color: "#666", lineHeight: 2.6, marginBottom: "2.5rem", maxWidth: 400 }}>
+            Shared-screen multiplayer party games.<br />
+            Your phone is the controller, and your<br />
+            character lives forever — wins, XP, and<br />
+            crowns follow you across every game.
+          </p>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+            <PixelButton onClick={() => navigate("/screen")}>PLAY CROWN ROYALE</PixelButton>
+            <PixelButton primary={false} outline>HOW IT WORKS</PixelButton>
           </div>
-          <div style={{
-            position: "absolute", bottom: 0, right: "8%",
-            width: "30%", borderRadius: 22, overflow: "hidden",
-            border: "2px solid rgba(255,255,255,0.12)", background: "#111", zIndex: 2,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.7)",
-          }}>
-            <div style={{ height: 230, background: "#0d0d0d", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: PX, fontSize: "0.35rem", color: "#222" }}>CTRL</span>
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: GREEN, border: `1px solid ${GREEN}44`, padding: "0.3rem 0.6rem" }}>
+              ✓ BUILT ON SOLANA
+            </span>
+            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: "#444" }}>Free · No download</span>
           </div>
         </div>
-      </section>
 
-      {/* ── Play Together ── */}
-      <section style={{ padding: "7rem 3rem 5rem", textAlign: "center" }}>
-        <h2 style={{ fontFamily: PX, fontSize: "clamp(1rem, 2.5vw, 1.6rem)", lineHeight: 1.9, marginBottom: "1rem" }}>
-          Play together with Friends on any screen
-        </h2>
-        <p style={{ color: "#666", fontSize: "0.95rem", marginBottom: "3.5rem", lineHeight: 1.9 }}>
-          Turn any screen into a gaming console and use your phones as controllers.
-        </p>
-        <div style={{ maxWidth: 520, margin: "0 auto 1.5rem", borderRadius: 14, overflow: "hidden", border: "2px solid rgba(255,255,255,0.08)", background: "#111", height: 280 }}>
-          <div style={{ height: "100%", background: "linear-gradient(135deg, #0d1117, #1a1a2e)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: PX, fontSize: "0.55rem", color: "#222" }}>GAME DISPLAY</span>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", maxWidth: 540, margin: "0 auto" }}>
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} style={{ flex: 1, height: 100, borderRadius: 10, background: "#111", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: PX, fontSize: "0.3rem", color: "#222" }}>P{i + 1}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Phones + Screen = Console ── */}
-      <section style={{ padding: "5rem 2rem", textAlign: "center" }}>
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: "clamp(0.75rem, 2.5vw, 2rem)",
-          flexWrap: "wrap", justifyContent: "center",
-          fontFamily: PX,
-          fontSize: "clamp(0.9rem, 2.2vw, 1.4rem)",
-        }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem" }}>
-            <PixelPhoneIcon size={22} /> Phones
-          </span>
-          <span style={{ color: "#444" }}>+</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem" }}>
-            <PixelMonitorIcon size={22} /> Screen
-          </span>
-          <span style={{ color: "#444" }}>=</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", color: "#3b82f6" }}>
-            <PixelControllerIcon2 size={22} /> Console
-          </span>
-        </div>
-      </section>
-
-      {/* ── Games ── */}
-      <section id="games" style={{ padding: "5rem 3rem 6rem" }}>
-        <h2 style={{ fontFamily: PX, fontSize: "clamp(1rem, 2.2vw, 1.5rem)", textAlign: "center", marginBottom: "1rem", lineHeight: 1.9 }}>
-          Games you can play
-        </h2>
-        <p style={{ color: "#666", textAlign: "center", fontSize: "0.95rem", marginBottom: "2.5rem", lineHeight: 1.9 }}>
-          Fun multiplayer games you can start in seconds.
-        </p>
-        <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginBottom: "3rem" }}>
-          {(["PC", "TV"] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={{
-              padding: "0.65rem 2rem", borderRadius: 8, border: "none", cursor: "pointer",
-              fontFamily: PX, fontSize: "0.65rem",
-              background: activeTab === tab ? "#3b82f6" : "#222",
-              color: activeTab === tab ? "#fff" : "#666",
-              transition: "all 0.15s",
-            }}>{tab}</button>
-          ))}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "1rem", maxWidth: 900, margin: "0 auto 3rem" }}>
-          {Array(6).fill(null).map((_, i) => (
-            <div key={i} style={{
-              aspectRatio: "4/3", borderRadius: 12, background: "#111",
-              border: "1px solid rgba(255,255,255,0.07)", cursor: "pointer",
-              transition: "border-color 0.15s, transform 0.15s",
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(59,130,246,0.4)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLDivElement).style.transform = "none"; }}
+        {/* Hero illustration — pixel art TV with empty screen */}
+        <div style={{ animation: "float 3s ease-in-out infinite", position: "relative" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: 520 }}>
+            <PixelHeroIllustration />
+            {/* Game screenshot overlay on TV screen */}
+            <img
+              src="/hero-game.png"
+              alt="Game on screen"
+              style={{
+                position: "absolute",
+                top: "22.5%", left: "22%",
+                width: "54%", height: "43.75%",
+                objectFit: "cover",
+              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
-          ))}
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <button style={btnPrimary}>Browse games</button>
+          </div>
         </div>
       </section>
 
-      {/* ── App Stores ── */}
-      <section style={{ padding: "3rem 2rem 5rem", display: "flex", justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
-        <AppBadge type="apple" />
-        <AppBadge type="google" />
-      </section>
+      {/* ── TICKER ── */}
+      <div style={{ background: BLUE, padding: "0.8rem 0", overflow: "hidden", whiteSpace: "nowrap" }}>
+        <div style={{ display: "inline-block", animation: "ticker 35s linear infinite", fontFamily: PX, fontSize: "0.55rem", color: "#fff", letterSpacing: "0.1em" }}>
+          {tickerText}
+        </div>
+      </div>
 
-      {/* ── FAQs ── */}
-      <section id="faqs" style={{ padding: "5rem 2rem 7rem", maxWidth: 620, margin: "0 auto" }}>
-        <h2 style={{ fontFamily: PX, fontSize: "clamp(1rem, 2.2vw, 1.5rem)", textAlign: "center", marginBottom: "0.75rem", lineHeight: 1.9 }}>FAQs</h2>
-        <p style={{ color: "#666", textAlign: "center", fontSize: "0.9rem", marginBottom: "3rem", lineHeight: 1.9 }}>
-          You need further assistance? Visit our{" "}
-          <a href="#" style={{ color: "#3b82f6" }}>Help section</a>
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {FAQS.map((faq, i) => (
-            <div key={i} style={{ borderRadius: 12, background: "#111", border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
-              <button onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{
-                width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "1.1rem 1.4rem", background: "transparent", border: "none",
-                color: "#e5e5e5", fontSize: "0.9rem", fontWeight: 500, cursor: "pointer", textAlign: "left", gap: "1rem",
-              }}>
-                {faq.q}
-                <span style={{ color: "#555", flexShrink: 0, transition: "transform 0.2s", display: "inline-block", transform: openFaq === i ? "rotate(180deg)" : "none" }}>▾</span>
-              </button>
-              {openFaq === i && (
-                <div style={{ padding: "0 1.4rem 1.1rem", color: "#777", fontSize: "0.88rem", lineHeight: 1.9 }}>{faq.a}</div>
-              )}
+      {/* ── HOW IT WORKS ── */}
+      <section id="how-it-works" style={{ padding: "7rem 3rem", maxWidth: 1200, margin: "0 auto" }}>
+        <SectionLabel text="HOW IT WORKS" />
+        <h2 style={{ fontFamily: PX, fontSize: "clamp(1.1rem, 2.5vw, 2rem)", lineHeight: 1.9, marginBottom: "3.5rem" }}>
+          Three steps to the <span style={{ color: YELLOW }}>crown</span><BlinkCursor color={YELLOW} />
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem" }}>
+          {[
+            { num: "01", icon: <PixelMonitor />, title: "OPEN THE GAME", desc: "Load PlayLana on a TV, laptop, or any browser big enough to share." },
+            { num: "02", icon: <PixelPhone />, title: "SCAN THE QR", desc: "Point your phone at the screen. You're in — your phone is now the controller." },
+            { num: "03", icon: <PixelCrown size={72} />, title: "WINS FOLLOW YOU", desc: "Crowns, XP, and high scores stay yours — across every game, forever." },
+          ].map((step) => (
+            <div key={step.num} style={{ border: `1px solid ${BLUE}`, background: CARD_BG, padding: "2rem", position: "relative" }}>
+              <div style={{ fontFamily: PX, fontSize: "0.6rem", color: BLUE, marginBottom: "1.5rem" }}>{step.num}</div>
+              <div style={{ marginBottom: "1.25rem" }}>{step.icon}</div>
+              <div style={{ fontFamily: PX, fontSize: "0.6rem", color: "#fff", marginBottom: "1rem", lineHeight: 1.9 }}>{step.title}</div>
+              <p style={{ fontFamily: PX, fontSize: "0.45rem", color: "#555", lineHeight: 2.4 }}>{step.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "3rem", display: "flex", gap: "3rem", flexWrap: "wrap", alignItems: "start" }}>
-        <div style={{ flex: "0 0 auto" }}>
-          <Logo />
-          <p style={{ color: "#333", fontSize: "0.8rem", marginTop: "0.75rem" }}>© 2026 PlayLana. All rights reserved.</p>
-        </div>
-        <div style={{ display: "flex", gap: "3rem", flexWrap: "wrap", flex: 1 }}>
-          <FooterCol title="Info" links={["Company"]} />
-          <FooterCol title="Support" links={["Help", "Contact Us"]} />
-          <div>
-            <p style={{ fontFamily: PX, fontSize: "0.65rem", color: "#e5e5e5", marginBottom: "1rem" }}>Socials</p>
-            <div style={{ display: "flex", gap: "0.6rem" }}>
-              {SOCIALS.map(({ icon, label, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  title={label}
-                  style={{
-                    width: 34, height: 34, borderRadius: 8,
-                    background: "#1e1e1e",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "#888", textDecoration: "none",
-                    transition: "color 0.15s, border-color 0.15s",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.2)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#888"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
-                >
-                  {icon}
-                </a>
-              ))}
+      {/* ── THE GAME ── */}
+      <section id="the-game" style={{ padding: "6rem 3rem", background: "#030303", borderTop: `1px solid #111`, borderBottom: `1px solid #111` }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <SectionLabel text="NOW PLAYING" />
+          <h2 style={{ fontFamily: PX, fontSize: "clamp(1.1rem, 2.5vw, 2rem)", lineHeight: 1.9, marginBottom: "3.5rem" }}>
+            The Game: <span style={{ color: YELLOW }}>Crown Royale</span>
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }}>
+            {/* Game screenshot — no border, pixelated */}
+            <div style={{ aspectRatio: "16/10", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+              <img
+                src="/game-screenshot.png"
+                alt="Crown Royale gameplay"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                  (e.target as HTMLImageElement).nextElementSibling?.removeAttribute("style");
+                }}
+              />
+              <span style={{ fontFamily: PX, fontSize: "0.45rem", color: "#222", position: "absolute", display: "none" }}>
+                [ GAMEPLAY SCREENSHOT ]
+              </span>
+            </div>
+
+            <div>
+              {/* Larger crown icon */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                <PixelCrown size={40} />
+                <span style={{ fontFamily: PX, fontSize: "0.55rem", color: "#888" }}>Crown Royale</span>
+              </div>
+              <p style={{ fontFamily: PX, fontSize: "0.5rem", color: "#888", lineHeight: 2.6, marginBottom: "2rem" }}>
+                First to 5 crowns wins the match.
+              </p>
+              <div style={{ marginBottom: "2rem" }}>
+                <div style={{ fontFamily: PX, fontSize: "0.5rem", color: "#444", marginBottom: "0.85rem", letterSpacing: "0.1em" }}>· MINI-GAMES</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  {MINI_GAMES.map((g) => (
+                    <div key={g.name} style={{ display: "flex", alignItems: "center", border: `1px solid ${g.color}55`, padding: "0.4rem 0.8rem", background: `${g.color}11` }}>
+                      {g.active && <PixelBlink color={g.color} />}
+                      <span style={{ fontFamily: PX, fontSize: "0.45rem", color: g.color, letterSpacing: "0.08em" }}>{g.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "2rem" }}>
+                {["2-4 PLAYERS","~10 MIN","1 WINNER"].map(s => (
+                  <span key={s} style={{ fontFamily: PX, fontSize: "0.45rem", color: "#fff", border: "1px solid #333", padding: "0.4rem 0.75rem", background: "#111" }}>{s}</span>
+                ))}
+              </div>
+              <PixelButton onClick={() => navigate("/screen")}>PLAY NOW</PixelButton>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── WHY ON-CHAIN ── */}
+      <section id="why-on-chain" style={{ padding: "7rem 3rem", maxWidth: 1200, margin: "0 auto" }}>
+        <SectionLabel text="WHY IT MATTERS" />
+        <h2 style={{ fontFamily: PX, fontSize: "clamp(1.1rem, 2.5vw, 2rem)", lineHeight: 1.9, marginBottom: "3.5rem" }}>
+          Your character. <span style={{ color: YELLOW }}>Forever.</span>
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem" }}>
+          {[
+            { icon: <PixelAvatar />, title: "YOUR CHARACTER IS YOURS", desc: "One identity, one name, one look — across every game on PlayLana." },
+            { icon: <PixelTrophy />, title: "YOUR WINS ARE FOREVER", desc: "XP, achievements, and high scores never reset. Save state is saved for real." },
+            { icon: <PixelChart />, title: "REAL LEADERBOARDS", desc: "Global rankings, anyone can verify. No fake numbers, no resets." },
+          ].map((card) => (
+            <div key={card.title} style={{ border: `1px solid ${BLUE}`, background: CARD_BG, padding: "2rem", position: "relative" }}>
+              <div style={{ marginBottom: "1.25rem" }}>{card.icon}</div>
+              <div style={{ fontFamily: PX, fontSize: "0.55rem", color: YELLOW, marginBottom: "0.9rem", lineHeight: 1.9 }}>{card.title}</div>
+              <p style={{ fontFamily: PX, fontSize: "0.45rem", color: "#555", lineHeight: 2.4 }}>{card.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section style={{ margin: "0 3rem 6rem", border: `2px solid ${BLUE}44`, background: "#010108", padding: "5rem 3rem", textAlign: "center" }}>
+        <h2 style={{ fontFamily: PX, fontSize: "clamp(1.2rem, 3vw, 2.2rem)", lineHeight: 1.8, marginBottom: "0.75rem" }}>
+          Grab a phone.
+        </h2>
+        <h2 style={{ fontFamily: PX, fontSize: "clamp(1.2rem, 3vw, 2.2rem)", lineHeight: 1.8, marginBottom: "2rem", color: YELLOW }}>
+          Grab the crown.
+        </h2>
+        <p style={{ fontFamily: PX, fontSize: "0.45rem", color: "#444", marginBottom: "2.5rem", lineHeight: 2.2 }}>
+          2-4 players · ~10 minutes · One screen · Every phone.
+        </p>
+        <PixelButton onClick={() => navigate("/screen")}>PLAY NOW</PixelButton>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ borderTop: `1px solid #111`, padding: "1.5rem 3rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+          <img src="/playlana-logo.png" alt="PlayLana" style={{ height: 36 }} />
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            {SOCIALS.map(({ icon, label, href }) => (
+              <a key={label} href={href} title={label} style={{
+                width: 34, height: 34, border: `1px solid ${BLUE}66`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#888", transition: "color 0.15s, border-color 0.15s",
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color="#fff"; (e.currentTarget as HTMLAnchorElement).style.borderColor=BLUE; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color="#888"; (e.currentTarget as HTMLAnchorElement).style.borderColor=`${BLUE}66`; }}
+              >{icon}</a>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: GREEN, border: `1px solid ${GREEN}55`, padding: "0.35rem 0.65rem" }}>✓ BUILT ON SOLANA</span>
+            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: YELLOW, border: `1px solid ${YELLOW}55`, padding: "0.35rem 0.65rem" }}>⚡ MAGICBLOCK</span>
+          </div>
+        </div>
+        <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
+          <span style={{ fontFamily: PX, fontSize: "0.45rem", color: "#333" }}>
+            © 2026 PlayLana · Press START to play<BlinkCursor color="#555" />
+          </span>
         </div>
       </footer>
     </div>
   );
 }
-
-// ─── Logo ─────────────────────────────────────────────────────────────────────
-
-function Logo() {
-  return (
-    <img
-      src="/playlana-logo.png"
-      alt="PlayLana"
-      style={{ height: 36, width: "auto", objectFit: "contain" }}
-    />
-  );
-}
-
-// ─── Footer column ────────────────────────────────────────────────────────────
-
-function FooterCol({ title, links }: { title: string; links: string[] }) {
-  return (
-    <div>
-      <p style={{ fontFamily: PX, fontSize: "0.65rem", color: "#e5e5e5", marginBottom: "1rem" }}>{title}</p>
-      {links.map(l => (
-        <a key={l} href="#" style={{ display: "block", color: "#555", fontSize: "0.85rem", marginBottom: "0.5rem", textDecoration: "none" }}>{l}</a>
-      ))}
-    </div>
-  );
-}
-
-// ─── App store badges ─────────────────────────────────────────────────────────
-
-function AppBadge({ type }: { type: "apple" | "google" }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: "0.85rem",
-      background: "#111", border: "1px solid rgba(255,255,255,0.1)",
-      borderRadius: 14, padding: "0.9rem 1.75rem", cursor: "pointer",
-      transition: "border-color 0.15s",
-    }}
-      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.2)"}
-      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.1)"}
-    >
-      {type === "apple"
-        ? <FaApple size={26} color="#fff" />
-        : <FaGooglePlay size={24} color="#fff" />
-      }
-      <div>
-        <div style={{ fontSize: "0.65rem", color: "#666", marginBottom: 3 }}>
-          {type === "apple" ? "Download on the" : "GET IT ON"}
-        </div>
-        <div style={{ fontSize: "1rem", fontWeight: 700, color: "#fff" }}>
-          {type === "apple" ? "App Store" : "Google Play"}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Pixel icons ──────────────────────────────────────────────────────────────
-
-function PixelScreenIcon() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 28 28" fill="none" style={{ verticalAlign: "middle", display: "inline-block" }}>
-      <rect x="2" y="4" width="24" height="16" rx="2" fill="#3b82f6" fillOpacity="0.2" stroke="#3b82f6" strokeWidth="1.5" />
-      <line x1="14" y1="20" x2="14" y2="25" stroke="#3b82f6" strokeWidth="1.5" />
-      <line x1="9" y1="25" x2="19" y2="25" stroke="#3b82f6" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-function PixelControllerIcon() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 28 28" fill="none" style={{ verticalAlign: "middle", display: "inline-block" }}>
-      <rect x="2" y="8" width="24" height="12" rx="6" fill="#3b82f6" fillOpacity="0.2" stroke="#3b82f6" strokeWidth="1.5" />
-      <line x1="8" y1="14" x2="12" y2="14" stroke="#3b82f6" strokeWidth="1.5" />
-      <line x1="10" y1="12" x2="10" y2="16" stroke="#3b82f6" strokeWidth="1.5" />
-      <circle cx="20" cy="12" r="1.2" fill="#3b82f6" />
-      <circle cx="18" cy="16" r="1.2" fill="#3b82f6" />
-    </svg>
-  );
-}
-
-function PixelPhoneIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" style={{ verticalAlign: "middle", flexShrink: 0 }}>
-      <rect x="4" y="1" width="10" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="9" cy="15" r="0.8" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PixelMonitorIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" style={{ verticalAlign: "middle", flexShrink: 0 }}>
-      <rect x="1" y="2" width="16" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="9" y1="13" x2="9" y2="17" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="5" y1="17" x2="13" y2="17" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-function PixelControllerIcon2({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" style={{ verticalAlign: "middle", flexShrink: 0 }}>
-      <rect x="1" y="5" width="16" height="8" rx="4" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="5" y1="9" x2="8" y2="9" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="6.5" y1="7.5" x2="6.5" y2="10.5" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="13" cy="8" r="0.8" fill="currentColor" />
-      <circle cx="11.5" cy="10" r="0.8" fill="currentColor" />
-    </svg>
-  );
-}
-
-// ─── Shared styles ────────────────────────────────────────────────────────────
-
-const btnPrimary: React.CSSProperties = {
-  background: "#3b82f6",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "0.9rem 2.25rem",
-  fontFamily: "'Press Start 2P', monospace",
-  fontSize: "0.75rem",
-  cursor: "pointer",
-  letterSpacing: "0.04em",
-  transition: "opacity 0.15s",
-};
