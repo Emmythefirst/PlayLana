@@ -176,7 +176,8 @@ function CrossDpad({ ARM, BASE, ACTIVE, BORDER, ARROW_COLOR, ARROW_ACTIVE, highl
 
 function CircleDpad({ BASE, ACTIVE, BORDER, ARROW_COLOR, ARROW_ACTIVE, highlight, enableUp, enableDown, enableLeft, enableRight, onPress, onRelease }: any) {
   const BTN = 80;
-  const GAP = 10;
+  const GAP = 14;
+  const MIDDLE_GAP = 36;
 
   const BtnCircle = ({ dir, label, enabled }: { dir: "up" | "down" | "left" | "right"; label: string; enabled: boolean }) => {
     if (!enabled) return <div style={{ width: BTN, height: BTN }} />;
@@ -212,7 +213,7 @@ function CircleDpad({ BASE, ACTIVE, BORDER, ARROW_COLOR, ARROW_ACTIVE, highlight
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: GAP, flexShrink: 0 }}>
       <BtnCircle dir="up" label="▲" enabled={enableUp} />
-      <div style={{ display: "flex", gap: GAP }}>
+      <div style={{ display: "flex", gap: MIDDLE_GAP }}>
         <BtnCircle dir="left" label="◀" enabled={enableLeft} />
         <BtnCircle dir="right" label="▶" enabled={enableRight} />
       </div>
