@@ -187,9 +187,10 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
       switch (msg.type) {
         case "gameInfo":
+          // Stop retry loop on ANY gameInfo — game has progressed
+          stopRetrying();
           if (msg.game === "CharacterSelect") {
             console.log("[React] Unity confirmed CharacterSelect — stopping retry");
-            stopRetrying();
           }
           setHostState((s) => ({
             ...s,
