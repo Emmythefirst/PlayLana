@@ -5,6 +5,52 @@ interface Props {
   onJump: () => void;
 }
 
+function RoundBtn({ label, onPress, onRelease }: {
+  label: string;
+  onPress: () => void;
+  onRelease?: () => void;
+  color?: string;
+}) {
+  return (
+    <button
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        e.currentTarget.style.background = "#333";
+        e.currentTarget.style.transform = "scale(0.93)";
+        onPress();
+      }}
+      onPointerUp={(e) => {
+        e.currentTarget.style.background = "#1c1c1c";
+        e.currentTarget.style.transform = "scale(1)";
+        onRelease?.();
+      }}
+      onPointerCancel={(e) => {
+        e.currentTarget.style.background = "#1c1c1c";
+        e.currentTarget.style.transform = "scale(1)";
+        onRelease?.();
+      }}
+      style={{
+        width: 88,
+        height: 88,
+        borderRadius: "50%",
+        border: "2px solid #333",
+        background: "#1c1c1c",
+        color: "#fff",
+        fontSize: "1.5rem",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        touchAction: "none",
+        userSelect: "none",
+        cursor: "pointer",
+        transition: "background 0.07s, transform 0.07s",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function HeadSmashController({ onMove, onJump }: Props) {
   const release = () => onMove("none");
 
@@ -16,38 +62,35 @@ export function HeadSmashController({ onMove, onJump }: Props) {
       padding: "1.5rem",
       gap: "1.5rem",
       alignItems: "center",
+      justifyContent: "space-between",
     }}>
 
-      {/* LEFT THUMB — Big circular JUMP */}
+      {/* LEFT — big circular JUMP */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <button
           onPointerDown={(e) => {
-            e.currentTarget.style.transform = "scale(0.93)";
-            e.currentTarget.style.boxShadow = "0 0 40px rgba(59,130,246,0.8), 0 0 80px rgba(59,130,246,0.4)";
-            e.currentTarget.style.background = "rgba(59,130,246,0.5)";
+            e.currentTarget.style.background = "#1a3a6e";
+            e.currentTarget.style.transform = "scale(0.94)";
             navigator.vibrate?.(30);
             onJump();
           }}
           onPointerUp={(e) => {
+            e.currentTarget.style.background = "#162040";
             e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.boxShadow = "0 0 24px rgba(59,130,246,0.3)";
-            e.currentTarget.style.background = "rgba(59,130,246,0.15)";
           }}
           onPointerCancel={(e) => {
+            e.currentTarget.style.background = "#162040";
             e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.boxShadow = "0 0 24px rgba(59,130,246,0.3)";
-            e.currentTarget.style.background = "rgba(59,130,246,0.15)";
           }}
           style={{
-            width: 160,
-            height: 160,
+            width: 150,
+            height: 150,
             borderRadius: "50%",
-            border: "3px solid rgba(59,130,246,0.6)",
-            background: "rgba(59,130,246,0.15)",
+            border: "3px solid #3b82f6",
+            background: "#162040",
             color: "#3b82f6",
-            fontSize: "0.65rem",
             fontFamily: "'Press Start 2P', monospace",
-            fontWeight: 700,
+            fontSize: "0.65rem",
             letterSpacing: "0.1em",
             display: "flex",
             flexDirection: "column",
@@ -57,60 +100,24 @@ export function HeadSmashController({ onMove, onJump }: Props) {
             touchAction: "none",
             userSelect: "none",
             cursor: "pointer",
-            boxShadow: "0 0 24px rgba(59,130,246,0.3)",
-            transition: "transform 0.08s, box-shadow 0.08s, background 0.08s",
+            transition: "background 0.07s, transform 0.07s",
           }}
         >
-          <span style={{ fontSize: "2.5rem", lineHeight: 1 }}>⬆</span>
+          <span style={{ fontSize: "2rem", lineHeight: 1 }}>↑</span>
           JUMP
         </button>
       </div>
 
-      {/* RIGHT THUMB — Left / Right stacked */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem", alignItems: "center" }}>
-        {(["left", "right"] as const).map((dir) => (
-          <button
-            key={dir}
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-              e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-              e.currentTarget.style.transform = "scale(0.95)";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)";
-              navigator.vibrate?.(20);
-              onMove(dir);
-            }}
-            onPointerUp={(e) => {
-              e.currentTarget.style.background = "#1a1a1a";
-              e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
-              release();
-            }}
-            onPointerCancel={(e) => {
-              e.currentTarget.style.background = "#1a1a1a";
-              e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
-              release();
-            }}
-            style={{
-              width: "100%",
-              height: 110,
-              borderRadius: 20,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "#1a1a1a",
-              color: "#fff",
-              fontSize: "2.2rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              touchAction: "none",
-              userSelect: "none",
-              cursor: "pointer",
-              transition: "background 0.08s, transform 0.08s, border-color 0.08s",
-            }}
-          >
-            {dir === "left" ? "←" : "→"}
-          </button>
-        ))}
+      {/* RIGHT — 3 round buttons: up top, left+right bottom */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+        {/* Up button — not used in HeadSmash but kept for layout symmetry */}
+        <div style={{ width: 88, height: 88 }} /> {/* spacer */}
+
+        {/* Left + Right */}
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <RoundBtn label="←" onPress={() => onMove("left")} onRelease={release} />
+          <RoundBtn label="→" onPress={() => onMove("right")} onRelease={release} />
+        </div>
       </div>
     </div>
   );

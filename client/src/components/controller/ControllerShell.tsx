@@ -16,9 +16,8 @@ interface Props {
 }
 
 export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady }: Props) {
-  const { playerIndex, currentGame, timer, round, alive, winner } = state;
+  const { playerIndex, currentGame, round, winner } = state;
   const myIndex = playerIndex ?? 0;
-  const isLandscape = currentGame !== "Lobby" && currentGame !== "CharacterSelect";
 
   // Auto-dismiss winner banner after 3 seconds
   const [showBanner, setShowBanner] = useState(false);
@@ -41,62 +40,33 @@ export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady
       className="controller-root"
       style={{
         background: "var(--bg)",
-        flexDirection: isLandscape ? "row" : "column",
+        flexDirection: "column",
+        position: "relative",
       }}
     >
-      {/* ── Header / sidebar ── */}
-      <div style={{
-        display: "flex",
-        flexDirection: isLandscape ? "column" : "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: isLandscape ? "1rem 0.75rem" : "0.75rem 1.25rem",
-        borderRight: isLandscape ? "1px solid var(--border)" : "none",
-        borderBottom: isLandscape ? "none" : "1px solid var(--border)",
-        flexShrink: 0,
-        gap: isLandscape ? "1.5rem" : 0,
-        minWidth: isLandscape ? 64 : "auto",
-      }}>
-        {/* Player badge */}
-        <div style={{ display: "flex", flexDirection: isLandscape ? "column" : "row", alignItems: "center", gap: "0.4rem" }}>
-          <PlayerDot index={myIndex} />
-          <span style={{ fontWeight: 700, fontSize: "0.8rem" }}>P{myIndex + 1}</span>
-          {alive[myIndex] === false && (
-            <span style={{ fontSize: "0.6rem", color: "#ef4444", fontWeight: 600 }}>DEAD</span>
-          )}
-        </div>
-
-        {/* Timer only — score removed */}
-        {timer !== null && currentGame !== "Lobby" && currentGame !== "CharacterSelect" && (
-          <div style={{
-            fontSize: "0.85rem", fontWeight: 700,
-            color: timer <= 10 ? "#ef4444" : "#fff",
-            textAlign: "center",
-          }}>
-            {timer}s
-          </div>
-        )}
-      </div>
-
       {/* ── Game over banner — auto-dismisses after 3s ── */}
       {showBanner && (
         <div style={{
-          padding: "0.6rem 1rem", textAlign: "center",
-          background: winner === myIndex ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.1)",
-          borderBottom: "1px solid var(--border)",
-          position: isLandscape ? "absolute" : "relative",
-          top: isLandscape ? 0 : "auto",
-          left: isLandscape ? 64 : "auto",
-          right: 0,
-          zIndex: 10,
+          position: "absolute",
+          top: 0, left: 0, right: 0,
+          padding: "0.65rem 1rem",
+          textAlign: "center",
+          background: winner === myIndex ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.85)",
+          zIndex: 20,
         }}>
-          <span style={{ fontWeight: 700, fontSize: "0.9rem", color: winner === myIndex ? "#22c55e" : "#ef4444" }}>
-            {winner === myIndex ? "🏆 You won!" : "😔 You lost"}
+          <span style={{
+            fontWeight: 700,
+            color: "#fff",
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: "0.6rem",
+            letterSpacing: "0.05em",
+          }}>
+            {winner === myIndex ? "🏆 YOU WON!" : "😔 YOU LOST"}
           </span>
         </div>
       )}
 
-      {/* ── Controller layout ── */}
+      {/* ── Controller layout — full screen ── */}
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
         <GameLayout
           game={currentGame}
@@ -139,11 +109,4 @@ function GameLayout({
     default:
       return null;
   }
-}
-
-function PlayerDot({ index }: { index: number }) {
-  const colors = ["#3b82f6", "#f59e0b"];
-  return (
-    <div style={{ width: 10, height: 10, borderRadius: "50%", background: colors[index] ?? "#888", flexShrink: 0 }} />
-  );
 }

@@ -9,8 +9,6 @@ interface Props {
   enableRight?: boolean;
 }
 
-type ActiveDir = Direction | null;
-
 export function DpadController({
   onMove,
   enableUp = true,
@@ -18,11 +16,11 @@ export function DpadController({
   enableLeft = true,
   enableRight = true,
 }: Props) {
-  const [active, setActive] = useState<ActiveDir>(null);
+  const [active, setActive] = useState<Direction | null>(null);
 
   const press = useCallback((dir: Direction) => {
     setActive(dir);
-    navigator.vibrate?.(20);
+    navigator.vibrate?.(18);
     onMove(dir);
   }, [onMove]);
 
@@ -31,17 +29,27 @@ export function DpadController({
     onMove("none");
   }, [onMove]);
 
-  const SIZE = 300;
-  const CENTER = SIZE / 2;
-  const INNER_R = 58;
-  const ARROW_OFFSET = 94;
+  const ARM = 90;   // arm length
+  const THICK = 90; // arm thickness
+  const GAP = 0;
 
-  const dirs: { dir: Direction; label: string; x: number; y: number; enabled: boolean }[] = [
-    { dir: "up",    label: "▲", x: CENTER,                y: CENTER - ARROW_OFFSET, enabled: enableUp },
-    { dir: "down",  label: "▼", x: CENTER,                y: CENTER + ARROW_OFFSET, enabled: enableDown },
-    { dir: "left",  label: "◀", x: CENTER - ARROW_OFFSET, y: CENTER,               enabled: enableLeft },
-    { dir: "right", label: "▶", x: CENTER + ARROW_OFFSET, y: CENTER,               enabled: enableRight },
-  ];
+  const armStyle = (dir: Direction, isActive: boolean): React.CSSProperties => ({
+    width: dir === "left" || dir === "right" ? ARM : THICK,
+    height: dir === "up" || dir === "down" ? ARM : THICK,
+    background: isActive ? "#2a2a2a" : "#1a1a1a",
+    border: `2px solid ${isActive ? "#555" : "#2a2a2a"}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    touchAction: "none",
+    cursor: "pointer",
+    userSelect: "none",
+    transition: "background 0.06s, border-color 0.06s",
+    borderRadius: dir === "up" ? "12px 12px 0 0"
+      : dir === "down" ? "0 0 12px 12px"
+      : dir === "left" ? "12px 0 0 12px"
+      : "0 12px 12px 0",
+  });
 
   return (
     <div style={{
@@ -51,89 +59,65 @@ export function DpadController({
       height: "100%",
       padding: "1rem",
     }}>
-      <div style={{ position: "relative", width: SIZE, height: SIZE }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: GAP }}>
 
-        {/* Outer dark circle */}
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, #2e2e2e 0%, #1a1a1a 100%)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.7), inset 0 2px 4px rgba(255,255,255,0.05)",
-        }} />
-
-        {/* Active glow */}
-        {active && (
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: "50%",
-            boxShadow: "inset 0 0 40px rgba(59,130,246,0.2)",
-            pointerEvents: "none",
-            zIndex: 1,
-          }} />
+        {/* Up */}
+        {enableUp && (
+          <button
+            onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("up"); }}
+            onPointerUp={release} onPointerCancel={release}
+            style={armStyle("up", active === "up")}
+          >
+            <span style={{ fontSize: "1.8rem", color: active === "up" ? "#fff" : "#555" }}>▲</span>
+          </button>
         )}
 
-        {/* Direction hit zones */}
-        {dirs.map(({ dir, x, y, label, enabled }) => {
-          if (!enabled) return null;
-          const isActive = active === dir;
-          return (
+        {/* Middle row: left + center + right */}
+        <div style={{ display: "flex", alignItems: "center", gap: GAP }}>
+          {enableLeft && (
             <button
-              key={dir}
-              onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture(e.pointerId);
-                press(dir);
-              }}
-              onPointerUp={release}
-              onPointerCancel={release}
-              style={{
-                position: "absolute",
-                left: x - 56,
-                top: y - 56,
-                width: 112,
-                height: 112,
-                borderRadius: "50%",
-                background: "transparent",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                touchAction: "none",
-                cursor: "pointer",
-                zIndex: 2,
-              }}
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("left"); }}
+              onPointerUp={release} onPointerCancel={release}
+              style={armStyle("left", active === "left")}
             >
-              <span style={{
-                fontSize: 24,
-                color: isActive ? "#ffffff" : "rgba(255,255,255,0.3)",
-                transform: isActive ? "scale(1.4)" : "scale(1)",
-                transition: "color 0.07s, transform 0.07s",
-                display: "block",
-                lineHeight: 1,
-              }}>
-                {label}
-              </span>
+              <span style={{ fontSize: "1.8rem", color: active === "left" ? "#fff" : "#555" }}>◀</span>
             </button>
-          );
-        })}
+          )}
 
-        {/* Center white circle */}
-        <div style={{
-          position: "absolute",
-          left: CENTER - INNER_R,
-          top: CENTER - INNER_R,
-          width: INNER_R * 2,
-          height: INNER_R * 2,
-          borderRadius: "50%",
-          background: "#ffffff",
-          boxShadow: active
-            ? "0 0 20px rgba(255,255,255,0.5)"
-            : "0 3px 10px rgba(0,0,0,0.5)",
-          transition: "box-shadow 0.08s",
-          zIndex: 3,
-          pointerEvents: "none",
-        }} />
+          {/* Center nub */}
+          <div style={{
+            width: THICK,
+            height: THICK,
+            background: "#111",
+            border: "2px solid #2a2a2a",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "2px solid #333" }} />
+          </div>
+
+          {enableRight && (
+            <button
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("right"); }}
+              onPointerUp={release} onPointerCancel={release}
+              style={armStyle("right", active === "right")}
+            >
+              <span style={{ fontSize: "1.8rem", color: active === "right" ? "#fff" : "#555" }}>▶</span>
+            </button>
+          )}
+        </div>
+
+        {/* Down */}
+        {enableDown && (
+          <button
+            onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); press("down"); }}
+            onPointerUp={release} onPointerCancel={release}
+            style={armStyle("down", active === "down")}
+          >
+            <span style={{ fontSize: "1.8rem", color: active === "down" ? "#fff" : "#555" }}>▼</span>
+          </button>
+        )}
       </div>
     </div>
   );

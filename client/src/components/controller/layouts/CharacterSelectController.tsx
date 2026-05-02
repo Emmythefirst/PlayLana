@@ -23,10 +23,9 @@ export function CharacterSelectController({ playerIndex, onMove, onConfirm }: Pr
     <div style={{
       display: "flex",
       flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "space-between",
       height: "100%",
-      padding: "2.5rem 2rem 3rem",
+      padding: "2rem 1.25rem 2.5rem",
+      gap: "1.5rem",
     }}>
 
       {/* Header */}
@@ -36,64 +35,55 @@ export function CharacterSelectController({ playerIndex, onMove, onConfirm }: Pr
           fontSize: "0.45rem",
           color: "#555",
           letterSpacing: "0.12em",
-          textTransform: "uppercase",
           marginBottom: "0.5rem",
         }}>
-          Choose your character
+          CHOOSE YOUR CHARACTER
         </div>
         <div style={{
           fontFamily: "'Press Start 2P', monospace",
           fontSize: "0.6rem",
-          fontWeight: 700,
           color,
         }}>
           Player {playerIndex + 1}
         </div>
       </div>
 
-      {/* Arrow buttons — big, side by side */}
-      <div style={{ display: "flex", gap: "2rem", width: "100%" }}>
+      {/* Arrow buttons - take most of the space */}
+      <div style={{ flex: 1, display: "flex", gap: "1rem", alignItems: "stretch" }}>
         {(["left", "right"] as const).map((dir) => (
           <button
             key={dir}
             onPointerDown={(e) => {
               e.currentTarget.setPointerCapture(e.pointerId);
-              e.currentTarget.style.transform = "scale(0.93)";
-              e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-              e.currentTarget.style.boxShadow = `0 0 24px ${color}55`;
-              e.currentTarget.style.borderColor = `${color}88`;
-              navigator.vibrate?.(20);
+              e.currentTarget.style.background = "#252525";
+              e.currentTarget.style.transform = "scale(0.96)";
+              navigator.vibrate?.(18);
               onMove(dir);
             }}
             onPointerUp={(e) => {
+              e.currentTarget.style.background = "#141414";
               e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.background = "#1a1a1a";
-              e.currentTarget.style.boxShadow = "none";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
               onMove("none");
             }}
             onPointerCancel={(e) => {
+              e.currentTarget.style.background = "#141414";
               e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.background = "#1a1a1a";
-              e.currentTarget.style.boxShadow = "none";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
               onMove("none");
             }}
             style={{
               flex: 1,
-              height: 140,
-              borderRadius: 28,
-              border: "1px solid rgba(255,255,255,0.1)",
-              background: "#1a1a1a",
-              color: "#fff",
-              fontSize: "3rem",
+              borderRadius: 20,
+              border: "2px solid #2a2a2a",
+              background: "#141414",
+              color: "#888",
+              fontSize: "2.8rem",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               touchAction: "none",
               userSelect: "none",
               cursor: "pointer",
-              transition: "transform 0.08s, background 0.08s, box-shadow 0.08s, border-color 0.08s",
+              transition: "background 0.07s, transform 0.07s",
             }}
           >
             {dir === "left" ? "‹" : "›"}
@@ -101,15 +91,15 @@ export function CharacterSelectController({ playerIndex, onMove, onConfirm }: Pr
         ))}
       </div>
 
-      {/* Confirm button */}
+      {/* Confirm */}
       <button
         onPointerDown={handleConfirm}
         style={{
           width: "100%",
           padding: "1.4rem",
-          borderRadius: 20,
-          border: confirmed ? "2px solid #22c55e" : `2px solid ${color}`,
-          background: confirmed ? "rgba(34,197,94,0.15)" : `${color}22`,
+          borderRadius: 16,
+          border: confirmed ? "2px solid #22c55e" : `2px solid ${color}55`,
+          background: confirmed ? "rgba(34,197,94,0.15)" : `${color}18`,
           color: confirmed ? "#22c55e" : color,
           fontFamily: "'Press Start 2P', monospace",
           fontSize: "0.7rem",
