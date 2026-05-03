@@ -27,15 +27,12 @@ export function useControllerWS(roomCode: string) {
         case "joined":
           setState((s) => ({ ...s, playerIndex: msg.playerIndex }));
           localStorage.setItem(sessionKey, msg.sessionToken);
-          // Haptic feedback on join
           navigator.vibrate?.(100);
           break;
-
         case "gameInfo":
           setState((s) => ({ ...s, currentGame: msg.game }));
           navigator.vibrate?.(50);
           break;
-
         case "state":
           setState((s) => ({
             ...s,
@@ -45,22 +42,15 @@ export function useControllerWS(roomCode: string) {
             ...(msg.alive !== undefined && { alive: msg.alive as [boolean, boolean] }),
           }));
           break;
-
         case "roundOver":
           setState((s) => ({ ...s, winner: msg.winner, round: "over" }));
-          // Long vibrate on round end
           navigator.vibrate?.([200, 100, 200]);
           break;
-
         case "playerJoined":
-          // Another player joined — short pulse
           navigator.vibrate?.(30);
           break;
-
         case "playerLeft":
-          // notify but don't change game state
           break;
-
         case "error":
           console.error("[Controller] Server error:", msg.message);
           break;
@@ -76,13 +66,11 @@ export function useControllerWS(roomCode: string) {
     send({ type: "join", roomCode, ...(sessionToken && { sessionToken }) });
   }, [send, roomCode, sessionKey]);
 
-  const sendMove = useCallback((direction: Direction) => send({ type: "move", direction }), [send]);
-  const sendJump = useCallback(() => send({ type: "jump" }), [send]);
-  const sendTap = useCallback(() => {
-    send({ type: "tap" });
-    navigator.vibrate?.(15);
-  }, [send]);
-  const sendReady = useCallback(() => send({ type: "ready" }), [send]);
+  const sendMove   = useCallback((direction: Direction) => send({ type: "move", direction }), [send]);
+  const sendJump   = useCallback(() => send({ type: "jump" }), [send]);
+  const sendTap    = useCallback(() => { send({ type: "tap" }); navigator.vibrate?.(15); }, [send]);
+  const sendReady  = useCallback(() => send({ type: "ready" }), [send]);
+  const sendWallet = useCallback((wallet: string) => send({ type: "wallet", wallet }), [send]);
 
-  return { state, connected, join, sendMove, sendJump, sendTap, sendReady };
+  return { state, connected, join, sendMove, sendJump, sendTap, sendReady, sendWallet };
 }

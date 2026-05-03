@@ -38,7 +38,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const startIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wsSendRef = useRef<(p: OutboundHostMsg) => void>(() => {});
-  // Track joined player count for sendStartToUnity
   const joinedCountRef = useRef(0);
 
   const stopRetrying = useCallback(() => {
@@ -64,8 +63,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     const doSend = () => {
       console.log(`[React] Sending startCharacterSelect to Unity (${playerCount} players)`);
       unityIframeRef.current?.contentWindow?.postMessage(
-        { type: "startCharacterSelect", playerCount },
-        "*"
+        { type: "startCharacterSelect", playerCount }, "*"
       );
     };
 
@@ -78,9 +76,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
   const startCountdown = useCallback(() => {
     if (countdownIntervalRef.current) return;
-
     setCountdown(COUNTDOWN_SECONDS);
-
     let remaining = COUNTDOWN_SECONDS;
     countdownIntervalRef.current = setInterval(() => {
       remaining -= 1;
@@ -117,6 +113,15 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           });
           break;
 
+        case "playerWallet":
+          // Relay wallet to Unity immediately
+          console.log(`[React] Player ${msg.playerIndex} wallet received, sending to Unity`);
+          unityIframeRef.current?.contentWindow?.postMessage(
+            { type: "playerWallet", playerIndex: msg.playerIndex, wallet: msg.wallet },
+            "*"
+          );
+          break;
+
         case "input": {
           const unityMsg: ReactToUnity = {
             type: "input",
@@ -132,19 +137,13 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
               if (players[msg.playerIndex]) {
                 players[msg.playerIndex] = { ...players[msg.playerIndex], ready: true };
               }
-
-              // Start countdown when minimum 2 joined players are all ready
               const joinedPlayers = players.filter((p) => p.joined);
               const minMet = joinedPlayers.length >= MIN_PLAYERS;
               const allJoinedReady = minMet && joinedPlayers.every((p) => p.ready);
-
-              console.log(`[React] Player ${msg.playerIndex} ready. joined: ${joinedPlayers.length}, allReady: ${allJoinedReady}`);
-
               if (allJoinedReady) {
                 console.log("[React] Min players ready — starting 7s countdown");
                 setTimeout(() => startCountdown(), 300);
               }
-
               return { ...s, players };
             });
           }
@@ -160,7 +159,6 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   );
 
   const { send, connected } = useWebSocket<InboundHostMsg, OutboundHostMsg>(onServerMessage);
-
   wsSendRef.current = send;
 
   useEffect(() => {
@@ -171,9 +169,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
       }, 100);
       return () => clearTimeout(t);
     }
-    if (!connected) {
-      registeredRef.current = false;
-    }
+    if (!connected) registeredRef.current = false;
   }, [connected, send, roomCode]);
 
   useEffect(() => {
@@ -187,17 +183,11 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
       switch (msg.type) {
         case "gameInfo":
-          // Stop retry loop on ANY gameInfo — game has progressed
           stopRetrying();
           if (msg.game === "CharacterSelect") {
-            console.log("[React] Unity confirmed CharacterSelect — stopping retry");
+            console.log("[React] Unity confirmed CharacterSelect");
           }
-          setHostState((s) => ({
-            ...s,
-            currentGame: msg.game,
-            round: "waiting",
-            winner: null,
-          }));
+          setHostState((s) => ({ ...s, currentGame: msg.game, round: "waiting", winner: null }));
           send({ type: "gameInfo", game: msg.game });
           break;
 
@@ -225,10 +215,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   }, [send, stopRetrying]);
 
   useEffect(() => {
-    return () => {
-      stopRetrying();
-      stopCountdown();
-    };
+    return () => { stopRetrying(); stopCountdown(); };
   }, [stopRetrying, stopCountdown]);
 
   return { hostState, connected, countdown };

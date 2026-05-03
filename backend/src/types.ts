@@ -17,7 +17,8 @@ export type PhoneMessage =
   | { type: "move"; direction: Direction }
   | { type: "jump" }
   | { type: "tap" }
-  | { type: "ready" };
+  | { type: "ready" }
+  | { type: "wallet"; wallet: string };
 
 // ─── Host (React screen) → Server ───────────────────────────────────────────
 export type HostMessage =
@@ -42,11 +43,12 @@ export type ServerToHost =
   | { type: "input"; playerIndex: number; direction?: Direction; inputType: "move" | "jump" | "tap" | "ready" }
   | { type: "playerJoined"; playerIndex: number; playerCount: number }
   | { type: "playerLeft"; playerIndex: number; playerCount: number }
+  | { type: "playerWallet"; playerIndex: number; wallet: string }
   | { type: "error"; message: string };
 
 // ─── Room state ───────────────────────────────────────────────────────────────
 export interface Room {
   host: import("ws").WebSocket | null;
   players: Array<import("ws").WebSocket | null>;
-  sessionTokens: Map<string, number>; // token → playerIndex
+  sessionTokens: Map<string, number>;
 }
