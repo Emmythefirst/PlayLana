@@ -25,7 +25,6 @@ export default function ControllerPage() {
   const hasJoined = useRef(false);
   const walletSentRef = useRef(false);
 
-  // Email modal state
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -38,30 +37,23 @@ export default function ControllerPage() {
   const { state, connected, join, sendMove, sendJump, sendTap, sendReady, sendWallet } =
     useControllerWS(safeRoomCode);
 
-  // Check if we need to show email modal on mount
   useEffect(() => {
     const savedEmail = localStorage.getItem(emailKey);
     if (!savedEmail) setShowEmailModal(true);
   }, []);
 
-  // Redirect if no room code
   useEffect(() => {
     if (!roomCode) navigate("/controller");
   }, [roomCode, navigate]);
 
-  // Join room as soon as WebSocket connects
   useEffect(() => {
-    if (!connected) {
-      hasJoined.current = false;
-      return;
-    }
+    if (!connected) { hasJoined.current = false; return; }
     if (!hasJoined.current && safeRoomCode) {
       join();
       hasJoined.current = true;
     }
   }, [connected, join, safeRoomCode]);
 
-  // Send wallet once after player index is assigned
   useEffect(() => {
     if (state.playerIndex === null || walletSentRef.current) return;
     const wallet = localStorage.getItem(walletKey);
@@ -71,27 +63,21 @@ export default function ControllerPage() {
     console.log(`[Controller] Sent wallet for P${state.playerIndex + 1}`);
   }, [state.playerIndex, sendWallet]);
 
-  // Also send wallet on reconnect
   useEffect(() => {
-    if (!connected) {
-      walletSentRef.current = false;
-    }
+    if (!connected) walletSentRef.current = false;
   }, [connected]);
 
-  // Prevent body scroll
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // Portrait/landscape detection
   useEffect(() => {
     const handler = () => setIsPortrait(window.innerHeight > window.innerWidth);
     window.addEventListener("resize", handler);
     return () => window.removeEventListener("resize", handler);
   }, []);
 
-  // Landscape lock
   useEffect(() => {
     try {
       if (state.currentGame !== "Lobby") {
@@ -102,12 +88,8 @@ export default function ControllerPage() {
     } catch { /* unsupported */ }
   }, [state.currentGame]);
 
-  const handleEmailSubmit = async () => {
-    const email = emailInput.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setEmailError("Enter a valid email");
-      return;
-    }
+  // ── Shared wallet creation logic ───────────────────────────────────────────
+  const submitWithEmail = async (email: string) => {
     setEmailError("");
     setWalletLoading(true);
     try {
@@ -115,7 +97,6 @@ export default function ControllerPage() {
       localStorage.setItem(emailKey, email);
       localStorage.setItem(walletKey, wallet);
       setShowEmailModal(false);
-      // Send wallet if already joined
       if (state.playerIndex !== null && !walletSentRef.current) {
         walletSentRef.current = true;
         sendWallet(wallet);
@@ -127,10 +108,18 @@ export default function ControllerPage() {
     }
   };
 
+  const handleEmailSubmit = () => {
+    const email = emailInput.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError("Enter a valid email");
+      return;
+    }
+    submitWithEmail(email);
+  };
+
   const handleGuestContinue = () => {
     const guestEmail = `guest_${Math.random().toString(36).slice(2, 8)}@playlana.local`;
-    setEmailInput(guestEmail);
-    handleEmailSubmit();
+    submitWithEmail(guestEmail);
   };
 
   const handleReady = () => {
@@ -171,14 +160,11 @@ export default function ControllerPage() {
             onChange={(e) => setEmailInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleEmailSubmit()}
             style={{
-              width: "100%",
-              padding: "1rem",
+              width: "100%", padding: "1rem",
               borderRadius: 12,
               border: emailError ? "1px solid #ef4444" : "1px solid #333",
-              background: "#111",
-              color: "#fff",
-              fontSize: "1rem",
-              outline: "none",
+              background: "#111", color: "#fff",
+              fontSize: "1rem", outline: "none",
               fontFamily: "system-ui, sans-serif",
             }}
           />
@@ -205,10 +191,9 @@ export default function ControllerPage() {
             disabled={walletLoading}
             style={{
               width: "100%", padding: "0.85rem",
-              borderRadius: 12,
-              border: "1px solid #222",
-              background: "transparent",
-              color: "#444", fontFamily: PX, fontSize: "0.45rem",
+              borderRadius: 12, border: "1px solid #222",
+              background: "transparent", color: "#444",
+              fontFamily: PX, fontSize: "0.45rem",
               letterSpacing: "0.06em", cursor: "pointer",
             }}
           >
