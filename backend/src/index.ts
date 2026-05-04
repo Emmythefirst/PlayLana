@@ -23,6 +23,15 @@ interface TaggedWS extends WebSocket {
   _roomCode?: string;
 }
 
+// ── Keepalive ping every 30s to prevent Railway idle timeout ─────────────────
+setInterval(() => {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.ping();
+    }
+  });
+}, 30000);
+
 wss.on("connection", (rawWs: WebSocket) => {
   const ws = rawWs as TaggedWS;
   console.log("[WS] New connection");
@@ -86,7 +95,6 @@ wss.on("connection", (rawWs: WebSocket) => {
       const { room } = found;
       const playerIndex = getPlayerIndex(room, ws);
 
-      // Wallet message — relay as playerWallet directly to host
       if (msg.type === "wallet") {
         if (room.host) send(room.host, { type: "playerWallet", playerIndex, wallet: msg.wallet });
         console.log(`[ROOM] Player ${playerIndex} wallet: ${msg.wallet.slice(0, 8)}...`);
