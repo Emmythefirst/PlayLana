@@ -74,6 +74,7 @@ export interface HostState {
 
 // ─── Unity ↔ React postMessage protocol ──────────────────────────────────────
 export type UnityToReact =
+  | { type: "unityReady" }
   | { type: "gameInfo"; game: GameName }
   | { type: "state"; scores?: number[]; timer?: number; round?: RoundState; alive?: boolean[] }
   | { type: "roundOver"; winner: number };

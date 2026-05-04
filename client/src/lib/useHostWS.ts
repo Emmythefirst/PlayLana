@@ -40,6 +40,30 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const wsSendRef = useRef<(p: OutboundHostMsg) => void>(() => {});
   const joinedCountRef = useRef(0);
 
+  // ── Unity ready queue ──────────────────────────────────────────────────────
+  const unityReadyRef = useRef(false);
+  const pendingUnityMessages = useRef<object[]>([]);
+
+  const postToUnity = useCallback((msg: object) => {
+    if (unityReadyRef.current) {
+      unityIframeRef.current?.contentWindow?.postMessage(msg, "*");
+    } else {
+      console.log("[React] Unity not ready — queuing message:", msg);
+      pendingUnityMessages.current.push(msg);
+    }
+  }, [unityIframeRef]);
+
+  const flushUnityQueue = useCallback(() => {
+    const queue = pendingUnityMessages.current;
+    if (queue.length === 0) return;
+    console.log(`[React] Unity ready — flushing ${queue.length} queued messages`);
+    queue.forEach(msg => {
+      unityIframeRef.current?.contentWindow?.postMessage(msg, "*");
+    });
+    pendingUnityMessages.current = [];
+  }, [unityIframeRef]);
+
+  // ── Retry logic ────────────────────────────────────────────────────────────
   const stopRetrying = useCallback(() => {
     if (startIntervalRef.current) {
       clearInterval(startIntervalRef.current);
@@ -62,6 +86,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     const playerCount = joinedCountRef.current;
     const doSend = () => {
       console.log(`[React] Sending startCharacterSelect to Unity (${playerCount} players)`);
+      // startCharacterSelect goes direct — not queued, Unity is already ready by this point
       unityIframeRef.current?.contentWindow?.postMessage(
         { type: "startCharacterSelect", playerCount }, "*"
       );
@@ -89,6 +114,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     }, 1000);
   }, [sendStartToUnity]);
 
+  // ── Server messages ────────────────────────────────────────────────────────
   const onServerMessage = useCallback(
     (msg: InboundHostMsg) => {
       switch (msg.type) {
@@ -113,14 +139,17 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           });
           break;
 
-        case "playerWallet":
-          // Relay wallet to Unity immediately
-          console.log(`[React] Player ${msg.playerIndex} wallet received, sending to Unity`);
-          unityIframeRef.current?.contentWindow?.postMessage(
-            { type: "playerWallet", playerIndex: msg.playerIndex, wallet: msg.wallet },
-            "*"
-          );
+        case "playerWallet": {
+          // Send wallet to Unity — queued if Unity isn't ready yet
+          const walletMsg = {
+            type: "playerWallet",
+            playerIndex: msg.playerIndex,
+            wallet: msg.wallet,
+          };
+          console.log(`[React] ${new Date().toISOString()} — sending playerWallet for P${msg.playerIndex + 1} to Unity`);
+          postToUnity(walletMsg);
           break;
+        }
 
         case "input": {
           const unityMsg: ReactToUnity = {
@@ -155,7 +184,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           break;
       }
     },
-    [unityIframeRef, startCountdown]
+    [unityIframeRef, startCountdown, postToUnity]
   );
 
   const { send, connected } = useWebSocket<InboundHostMsg, OutboundHostMsg>(onServerMessage);
@@ -172,12 +201,22 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     if (!connected) registeredRef.current = false;
   }, [connected, send, roomCode]);
 
+  // ── Unity postMessages ─────────────────────────────────────────────────────
   useEffect(() => {
     const handleUnityMessage = (event: MessageEvent) => {
       let raw = event.data;
       if (typeof raw === "string") {
         try { raw = JSON.parse(raw); } catch { return; }
       }
+
+      // Handle unityReady — flush queued messages
+      if (raw?.type === "unityReady") {
+        console.log("[React] Unity is ready — flushing message queue");
+        unityReadyRef.current = true;
+        flushUnityQueue();
+        return;
+      }
+
       const msg = raw as UnityToReact;
       if (!msg?.type) return;
 
@@ -212,7 +251,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
     window.addEventListener("message", handleUnityMessage);
     return () => window.removeEventListener("message", handleUnityMessage);
-  }, [send, stopRetrying]);
+  }, [send, stopRetrying, flushUnityQueue]);
 
   useEffect(() => {
     return () => { stopRetrying(); stopCountdown(); };
