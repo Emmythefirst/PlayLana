@@ -3,6 +3,7 @@ import Landing from "@/pages/Landing";
 import ScreenPage from "@/pages/screen/ScreenPage";
 import JoinPage from "@/pages/controller/JoinPage";
 import ControllerPage from "@/pages/controller/ControllerPage";
+import LeaderboardPage from "@/pages/Leaderboard";
 
 export default function App() {
   return (
@@ -17,6 +18,9 @@ export default function App() {
         {/* Phone controller */}
         <Route path="/controller" element={<JoinPage />} />
         <Route path="/controller/:roomCode" element={<ControllerPage />} />
+
+        {/* Leaderboard page */}
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />

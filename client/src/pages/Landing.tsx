@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaXTwitter, FaDiscord, FaGithub } from "react-icons/fa6";
 
@@ -8,6 +8,42 @@ const BLUE = "#3b82f6";
 const GREEN = "#22c55e";
 const BG = "#000000";
 const CARD_BG = "#0a0a0a";
+
+const API = "https://playlana-backend.vercel.app/api/leaderboard";
+const SOAR_KEY = "DCbKV9Mgbr3pQcMa3Mse8E8AokWugkPKnYrUomxSM8jk";
+
+interface LeaderboardEntry { rank: number; wallet: string; score: string; }
+
+function truncateWallet(w: string) {
+  if (!w || w.length < 8) return w;
+  return `${w.slice(0, 4)}...${w.slice(-4)}`;
+}
+
+function useLeaderboard() {
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch_ = useCallback(async () => {
+    try {
+      const res = await fetch(API);
+      if (!res.ok) return;
+      const data = await res.json();
+      const filtered = (data.entries || [])
+        .filter((e: any) => e.wallet && e.wallet !== "null" && Number(e.score) > 0)
+        .slice(0, 3);
+      setEntries(filtered);
+    } catch {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    fetch_();
+    const t = setInterval(fetch_, 10000);
+    document.addEventListener("visibilitychange", fetch_);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", fetch_); };
+  }, [fetch_]);
+
+  return { entries, loading };
+}
 
 const TICKER_ITEMS = [
   "2-4 PLAYERS","~10 MIN","FIRST TO 5 CROWNS",
@@ -252,6 +288,64 @@ function PixelButton({ children, onClick, primary = true, outline = false }: {
   );
 }
 
+function LeaderboardPreview() {
+  const { entries, loading } = useLeaderboard();
+  const rankColor = (r: number) => r === 1 ? YELLOW : r === 2 ? "#aaa" : r === 3 ? "#cd7f32" : "#fff";
+
+  return (
+    <div style={{ border: `1px solid ${BLUE}22`, background: CARD_BG }}>
+      {/* Header */}
+      <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 70px", padding: "0.75rem 1.25rem", borderBottom: `1px solid ${BLUE}22` }}>
+        {["#", "WALLET", "♛"].map(h => (
+          <span key={h} style={{ fontFamily: PX, fontSize: "0.58rem", color: "#444", letterSpacing: "0.08em" }}>{h}</span>
+        ))}
+      </div>
+
+      {loading ? (
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+          <span style={{ fontFamily: PX, fontSize: "0.58rem", color: "#333" }}>Loading...</span>
+        </div>
+      ) : entries.length === 0 ? (
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+          <span style={{ fontFamily: PX, fontSize: "0.58rem", color: "#333", lineHeight: 2.5, display: "block" }}>
+            No entries yet.<br />Be the first champion.
+          </span>
+        </div>
+      ) : (
+        entries.map((e) => (
+          <div
+            key={e.wallet}
+            style={{
+              display: "grid", gridTemplateColumns: "40px 1fr 70px",
+              padding: "0.9rem 1.25rem",
+              borderLeft: `2px solid ${rankColor(e.rank)}`,
+              borderBottom: `1px solid #0a0a0a`,
+              background: `${rankColor(e.rank)}05`,
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontFamily: PX, fontSize: "0.55rem", color: rankColor(e.rank) }}>
+              {e.rank}
+            </span>
+            <span style={{ fontFamily: PX, fontSize: "0.52rem", color: rankColor(e.rank) }}>
+              {truncateWallet(e.wallet)}
+            </span>
+            <span style={{ fontFamily: PX, fontSize: "0.58rem", color: rankColor(e.rank) }}>
+              {e.score}
+            </span>
+          </div>
+        ))
+      )}
+
+      {/* Footer */}
+      <div style={{ padding: "0.6rem 1.25rem", borderTop: `1px solid ${BLUE}22`, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <span style={{ width: 6, height: 6, background: GREEN, borderRadius: "50%", display: "inline-block", animation: "blink 2s step-end infinite", flexShrink: 0 }} />
+        <span style={{ fontFamily: PX, fontSize: "0.35rem", color: "#333" }}>Live · updates every 10s</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function Landing() {
   const navigate = useNavigate();
@@ -280,9 +374,13 @@ export default function Landing() {
       }}>
         <img src="/playlana-logo.png" alt="PlayLana" style={{ height: 36 }} />
         <div style={{ display: "flex", gap: "2.5rem", alignItems: "center" }}>
-          {[["How it works","#how-it-works"],["The Game","#the-game"],["Why on-chain","#why-on-chain"]].map(([l,h]) => (
-            <a key={l} href={h} style={{ fontFamily: PX, fontSize: "0.5rem", color: "#888", letterSpacing: "0.08em" }}>{l}</a>
-          ))}
+          {[["How it works","#how-it-works"],["The Game","#the-game"],["Why on-chain","#why-on-chain"],["Leaderboard","/leaderboard"]].map(([l,h]) =>
+            h.startsWith("/") ? (
+              <button key={l} onClick={() => navigate(h)} style={{ fontFamily: PX, fontSize: "0.5rem", color: "#888", letterSpacing: "0.08em", background: "none", border: "none", cursor: "pointer" }}>{l}</button>
+            ) : (
+              <a key={l} href={h} style={{ fontFamily: PX, fontSize: "0.5rem", color: "#888", letterSpacing: "0.08em" }}>{l}</a>
+            )
+          )}
         </div>
       </nav>
 
@@ -307,10 +405,10 @@ export default function Landing() {
             <PixelButton primary={false} outline>HOW IT WORKS</PixelButton>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: GREEN, border: `1px solid ${GREEN}44`, padding: "0.3rem 0.6rem" }}>
+            <span style={{ fontFamily: PX, fontSize: "0.55rem", color: GREEN, border: `1px solid ${GREEN}44`, padding: "0.3rem 0.6rem" }}>
               ✓ BUILT ON SOLANA
             </span>
-            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: "#444" }}>Free · No download</span>
+            <span style={{ fontFamily: PX, fontSize: "0.55rem", color: "#444" }}>Free · No download</span>
           </div>
         </div>
 
@@ -357,7 +455,7 @@ export default function Landing() {
               <div style={{ fontFamily: PX, fontSize: "0.6rem", color: BLUE, marginBottom: "1.5rem" }}>{step.num}</div>
               <div style={{ marginBottom: "1.25rem" }}>{step.icon}</div>
               <div style={{ fontFamily: PX, fontSize: "0.6rem", color: "#fff", marginBottom: "1rem", lineHeight: 1.9 }}>{step.title}</div>
-              <p style={{ fontFamily: PX, fontSize: "0.45rem", color: "#555", lineHeight: 2.4 }}>{step.desc}</p>
+              <p style={{ fontFamily: PX, fontSize: "0.55rem", color: "#555", lineHeight: 2.4 }}>{step.desc}</p>
             </div>
           ))}
         </div>
@@ -382,7 +480,7 @@ export default function Landing() {
                   (e.target as HTMLImageElement).nextElementSibling?.removeAttribute("style");
                 }}
               />
-              <span style={{ fontFamily: PX, fontSize: "0.45rem", color: "#222", position: "absolute", display: "none" }}>
+              <span style={{ fontFamily: PX, fontSize: "0.55rem", color: "#222", position: "absolute", display: "none" }}>
                 [ GAMEPLAY SCREENSHOT ]
               </span>
             </div>
@@ -402,14 +500,14 @@ export default function Landing() {
                   {MINI_GAMES.map((g) => (
                     <div key={g.name} style={{ display: "flex", alignItems: "center", border: `1px solid ${g.color}55`, padding: "0.4rem 0.8rem", background: `${g.color}11` }}>
                       {g.active && <PixelBlink color={g.color} />}
-                      <span style={{ fontFamily: PX, fontSize: "0.45rem", color: g.color, letterSpacing: "0.08em" }}>{g.name}</span>
+                      <span style={{ fontFamily: PX, fontSize: "0.55rem", color: g.color, letterSpacing: "0.08em" }}>{g.name}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "2rem" }}>
                 {["2-4 PLAYERS","~10 MIN","1 WINNER"].map(s => (
-                  <span key={s} style={{ fontFamily: PX, fontSize: "0.45rem", color: "#fff", border: "1px solid #333", padding: "0.4rem 0.75rem", background: "#111" }}>{s}</span>
+                  <span key={s} style={{ fontFamily: PX, fontSize: "0.55rem", color: "#fff", border: "1px solid #333", padding: "0.4rem 0.75rem", background: "#111" }}>{s}</span>
                 ))}
               </div>
               <PixelButton onClick={() => navigate("/screen")}>PLAY NOW</PixelButton>
@@ -433,9 +531,49 @@ export default function Landing() {
             <div key={card.title} style={{ border: `1px solid ${BLUE}`, background: CARD_BG, padding: "2rem", position: "relative" }}>
               <div style={{ marginBottom: "1.25rem" }}>{card.icon}</div>
               <div style={{ fontFamily: PX, fontSize: "0.55rem", color: YELLOW, marginBottom: "0.9rem", lineHeight: 1.9 }}>{card.title}</div>
-              <p style={{ fontFamily: PX, fontSize: "0.45rem", color: "#555", lineHeight: 2.4 }}>{card.desc}</p>
+              <p style={{ fontFamily: PX, fontSize: "0.55rem", color: "#555", lineHeight: 2.4 }}>{card.desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── LEADERBOARD ── */}
+      <section id="leaderboard" style={{ padding: "7rem 3rem", maxWidth: 1200, margin: "0 auto" }}>
+        <SectionLabel text="CROWN ROYALE CHAMPIONS" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "flex-start" }}>
+          {/* Left */}
+          <div>
+            <h2 style={{ fontFamily: PX, fontSize: "clamp(1rem, 2.5vw, 1.8rem)", lineHeight: 1.9, marginBottom: "1.25rem" }}>
+              Live <span style={{ color: YELLOW }}>Rankings</span>
+            </h2>
+            <p style={{ fontFamily: PX, fontSize: "0.55rem", color: "#555", lineHeight: 2.6, marginBottom: "2rem" }}>
+              Every crown earned in Crown Royale<br />is written permanently on Solana.<br />Anyone can verify, no one can fake it.
+            </p>
+            <div style={{ border: `1px solid ${BLUE}44`, background: "#010108", padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
+              <div style={{ fontFamily: PX, fontSize: "0.58rem", color: "#444", marginBottom: "0.5rem" }}>SOAR LEADERBOARD KEY</div>
+              <a
+                href={`https://explorer.solana.com/address/${SOAR_KEY}?cluster=devnet`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontFamily: PX, fontSize: "0.58rem", color: BLUE, letterSpacing: "0.05em" }}
+              >
+                {SOAR_KEY.slice(0, 4)}...{SOAR_KEY.slice(-4)}
+              </a>
+            </div>
+            <button
+              onClick={() => navigate("/leaderboard")}
+              style={{
+                fontFamily: PX, fontSize: "0.58rem", color: BLUE,
+                background: "none", border: `1px solid ${BLUE}44`,
+                padding: "0.75rem 1.25rem", cursor: "pointer", letterSpacing: "0.08em",
+              }}
+            >
+              VIEW FULL LEADERBOARD →
+            </button>
+          </div>
+
+          {/* Right — top 3 */}
+          <LeaderboardPreview />
         </div>
       </section>
 
@@ -447,7 +585,7 @@ export default function Landing() {
         <h2 style={{ fontFamily: PX, fontSize: "clamp(1.2rem, 3vw, 2.2rem)", lineHeight: 1.8, marginBottom: "2rem", color: YELLOW }}>
           Grab the crown.
         </h2>
-        <p style={{ fontFamily: PX, fontSize: "0.45rem", color: "#444", marginBottom: "2.5rem", lineHeight: 2.2 }}>
+        <p style={{ fontFamily: PX, fontSize: "0.55rem", color: "#444", marginBottom: "2.5rem", lineHeight: 2.2 }}>
           2-4 players · ~10 minutes · One screen · Every phone.
         </p>
         <PixelButton onClick={() => navigate("/screen")}>PLAY NOW</PixelButton>
@@ -470,12 +608,12 @@ export default function Landing() {
             ))}
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: GREEN, border: `1px solid ${GREEN}55`, padding: "0.35rem 0.65rem" }}>✓ BUILT ON SOLANA</span>
-            <span style={{ fontFamily: PX, fontSize: "0.45rem", color: YELLOW, border: `1px solid ${YELLOW}55`, padding: "0.35rem 0.65rem" }}>⚡ MAGICBLOCK</span>
+            <span style={{ fontFamily: PX, fontSize: "0.55rem", color: GREEN, border: `1px solid ${GREEN}55`, padding: "0.35rem 0.65rem" }}>✓ BUILT ON SOLANA</span>
+            <span style={{ fontFamily: PX, fontSize: "0.55rem", color: YELLOW, border: `1px solid ${YELLOW}55`, padding: "0.35rem 0.65rem" }}>⚡ MAGICBLOCK</span>
           </div>
         </div>
         <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
-          <span style={{ fontFamily: PX, fontSize: "0.45rem", color: "#333" }}>
+          <span style={{ fontFamily: PX, fontSize: "0.55rem", color: "#333" }}>
             © 2026 PlayLana · Press START to play<BlinkCursor color="#555" />
           </span>
         </div>
