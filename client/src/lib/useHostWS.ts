@@ -43,6 +43,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   // ── Unity ready queue ──────────────────────────────────────────────────────
   const unityReadyRef = useRef(false);
   const pendingUnityMessages = useRef<object[]>([]);
+  const retryGenerationRef = useRef(0);
 
   const postToUnity = useCallback((msg: object) => {
     if (unityReadyRef.current) {
@@ -65,6 +66,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
   // ── Retry logic ────────────────────────────────────────────────────────────
   const stopRetrying = useCallback(() => {
+    retryGenerationRef.current += 1; // Invalidate all pending doSend closures
     if (startIntervalRef.current) {
       clearInterval(startIntervalRef.current);
       startIntervalRef.current = null;
@@ -83,10 +85,14 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     stopRetrying();
     stopCountdown();
 
+    retryGenerationRef.current += 1;
+    const generation = retryGenerationRef.current;
+
     const playerCount = joinedCountRef.current;
     const doSend = () => {
+      // If generation has changed, this closure is stale — bail out silently
+      if (retryGenerationRef.current !== generation) return;
       console.log(`[React] Sending startCharacterSelect to Unity (${playerCount} players)`);
-      // startCharacterSelect goes direct — not queued, Unity is already ready by this point
       unityIframeRef.current?.contentWindow?.postMessage(
         { type: "startCharacterSelect", playerCount }, "*"
       );
