@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import type { ControllerState, Direction, GameName } from "@/types/messages";
 import { LobbyController } from "./layouts/LobbyController";
 import { DpadController } from "./layouts/DpadController";
@@ -16,24 +15,8 @@ interface Props {
 }
 
 export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady }: Props) {
-  const { playerIndex, currentGame, round, winner } = state;
+  const { playerIndex, currentGame } = state;
   const myIndex = playerIndex ?? 0;
-
-  // Auto-dismiss winner banner after 3 seconds
-  const [showBanner, setShowBanner] = useState(false);
-  const bannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => {
-    if (round === "over" && winner !== null) {
-      setShowBanner(true);
-      clearTimeout(bannerTimer.current);
-      bannerTimer.current = setTimeout(() => setShowBanner(false), 3000);
-    } else {
-      setShowBanner(false);
-      clearTimeout(bannerTimer.current);
-    }
-    return () => clearTimeout(bannerTimer.current);
-  }, [round, winner]);
 
   return (
     <div
@@ -44,29 +27,6 @@ export function ControllerShell({ state, onMove, onJump, onTap, onReady, isReady
         position: "relative",
       }}
     >
-      {/* ── Game over banner — auto-dismisses after 3s ── */}
-      {showBanner && (
-        <div style={{
-          position: "absolute",
-          top: 0, left: 0, right: 0,
-          padding: "0.65rem 1rem",
-          textAlign: "center",
-          background: winner === myIndex ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.85)",
-          zIndex: 20,
-        }}>
-          <span style={{
-            fontWeight: 700,
-            color: "#fff",
-            fontFamily: "'Press Start 2P', monospace",
-            fontSize: "0.6rem",
-            letterSpacing: "0.05em",
-          }}>
-            {winner === myIndex ? "🏆 YOU WON!" : "😔 YOU LOST"}
-          </span>
-        </div>
-      )}
-
-      {/* ── Controller layout — full screen ── */}
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
         <GameLayout
           game={currentGame}
