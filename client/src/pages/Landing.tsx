@@ -402,7 +402,7 @@ export default function Landing() {
           </p>
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
             <PixelButton onClick={() => navigate("/screen")}>PLAY CROWN ROYALE</PixelButton>
-            <PixelButton primary={false} outline>HOW IT WORKS</PixelButton>
+            <PixelButton primary={false} outline onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>HOW IT WORKS</PixelButton>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <span style={{ fontFamily: PX, fontSize: "0.55rem", color: GREEN, border: `1px solid ${GREEN}44`, padding: "0.3rem 0.6rem" }}>
@@ -614,7 +614,7 @@ export default function Landing() {
         </div>
         <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
           <span style={{ fontFamily: PX, fontSize: "0.55rem", color: "#333" }}>
-            © 2026 PlayLana · Press START to play<BlinkCursor color="#555" />
+            © 2026 PlayLana · Play Crown Royale now<BlinkCursor color="#555" />
           </span>
         </div>
       </footer>
