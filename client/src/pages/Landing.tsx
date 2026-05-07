@@ -59,7 +59,7 @@ const MINI_GAMES = [
 ];
 
 const SOCIALS = [
-  { icon: <FaXTwitter size={14} />, label: "X", href: "#" },
+  { icon: <FaXTwitter size={14} />, label: "X", href: "https://x.com/playlanadotgg?s=20" },
   { icon: <FaDiscord size={14} />, label: "Discord", href: "#" },
   { icon: <FaGithub size={14} />, label: "GitHub", href: "#" },
 ];
@@ -597,7 +597,7 @@ export default function Landing() {
           <img src="/playlana-logo.png" alt="PlayLana" style={{ height: 36 }} />
           <div style={{ display: "flex", gap: "0.5rem" }}>
             {SOCIALS.map(({ icon, label, href }) => (
-              <a key={label} href={href} title={label} style={{
+              <a key={label} href={href} title={label} target="_blank" rel="noopener noreferrer" style={{
                 width: 34, height: 34, border: `1px solid ${BLUE}66`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: "#888", transition: "color 0.15s, border-color 0.15s",
