@@ -6,6 +6,7 @@ const YELLOW = "#f5c518";
 const BLUE = "#3b82f6";
 const GREEN = "#22c55e";
 const BG = "#000000";
+const CARD_BG = "#0a0a0a";
 const API = "https://playlana-backend.vercel.app/api/leaderboard";
 const SOAR_KEY = "DCbKV9Mgbr3pQcMa3Mse8E8AokWugkPKnYrUomxSM8jk";
 
@@ -88,7 +89,7 @@ export default function LeaderboardPage() {
         >
           ← PLAYLANA
         </button>
-        <span style={{ fontFamily: PX, fontSize: "0.5rem", color: YELLOW, letterSpacing: "0.1em" }}>
+        <span style={{ fontFamily: PX, fontSize: "clamp(1rem, 3vw, 1.8rem)", color: YELLOW, letterSpacing: "0.1em" }}>
           LEADERBOARD
         </span>
         <span style={{ fontFamily: PX, fontSize: "0.4rem", color: "#333" }}>
@@ -106,7 +107,7 @@ export default function LeaderboardPage() {
           <h1 style={{ fontFamily: PX, fontSize: "clamp(1rem, 3vw, 1.8rem)", lineHeight: 1.8, marginBottom: "1rem" }}>
             Global <span style={{ color: YELLOW }}>Rankings</span>
           </h1>
-          <p style={{ fontFamily: PX, fontSize: "0.4rem", color: "#444", lineHeight: 2.4, marginBottom: "1.5rem" }}>
+          <p style={{ fontFamily: PX, fontSize: "0.58rem", color: "#444", lineHeight: 2.4, marginBottom: "1.5rem" }}>
             Live on Solana · Verified on-chain · Powered by SOAR
           </p>
 
