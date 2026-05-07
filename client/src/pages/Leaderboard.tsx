@@ -6,7 +6,6 @@ const YELLOW = "#f5c518";
 const BLUE = "#3b82f6";
 const GREEN = "#22c55e";
 const BG = "#000000";
-const CARD_BG = "#0a0a0a";
 const API = "https://playlana-backend.vercel.app/api/leaderboard";
 const SOAR_KEY = "DCbKV9Mgbr3pQcMa3Mse8E8AokWugkPKnYrUomxSM8jk";
 
