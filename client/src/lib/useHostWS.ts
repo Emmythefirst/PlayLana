@@ -238,6 +238,13 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
       switch (msg.type) {
         case "gameInfo":
           stopRetrying();
+
+          // Ignore stale CharacterSelect from Unity if a real game already started
+          if (msg.game === "CharacterSelect" && gameStartedRef.current) {
+            console.log("[React] Ignoring stale gameInfo: CharacterSelect — game already started");
+            break;
+          }
+
           currentGameRef.current = msg.game;
           if (msg.game !== "Lobby" && msg.game !== "CharacterSelect") {
             gameStartedRef.current = true; // lock out any further startCharacterSelect sends
