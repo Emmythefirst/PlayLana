@@ -45,6 +45,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const pendingUnityMessages = useRef<object[]>([]);
   const retryGenerationRef = useRef(0);
   const gameStartedRef = useRef(false); // true once any real game begins
+  const currentGameRef = useRef<HostState["currentGame"]>("Lobby"); // tracks current game for reconnects
 
   const postToUnity = useCallback((msg: object) => {
     if (unityReadyRef.current) {
@@ -105,6 +106,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     startIntervalRef.current = setInterval(doSend, 1500);
 
     setHostState((s) => ({ ...s, currentGame: "CharacterSelect" }));
+    currentGameRef.current = "CharacterSelect";
     wsSendRef.current({ type: "gameInfo", game: "CharacterSelect" });
   }, [unityIframeRef, stopRetrying, stopCountdown]);
 
@@ -137,6 +139,10 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
             joinedCountRef.current = players.filter(p => p.joined).length;
             return { ...s, players };
           });
+          // If game is in progress, resend current game state so reconnected phone gets correct controller
+          if (currentGameRef.current !== "Lobby") {
+            wsSendRef.current({ type: "gameInfo", game: currentGameRef.current });
+          }
           break;
 
         case "playerLeft":
@@ -232,6 +238,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
       switch (msg.type) {
         case "gameInfo":
           stopRetrying();
+          currentGameRef.current = msg.game;
           if (msg.game !== "Lobby" && msg.game !== "CharacterSelect") {
             gameStartedRef.current = true; // lock out any further startCharacterSelect sends
           }
