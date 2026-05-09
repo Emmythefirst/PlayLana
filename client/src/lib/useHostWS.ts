@@ -44,6 +44,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const unityReadyRef = useRef(false);
   const pendingUnityMessages = useRef<object[]>([]);
   const retryGenerationRef = useRef(0);
+  const gameStartedRef = useRef(false); // true once any real game begins
 
   const postToUnity = useCallback((msg: object) => {
     if (unityReadyRef.current) {
@@ -85,13 +86,15 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     stopRetrying();
     stopCountdown();
 
+    gameStartedRef.current = false; // reset for new game session
     retryGenerationRef.current += 1;
     const generation = retryGenerationRef.current;
 
     const playerCount = joinedCountRef.current;
     const doSend = () => {
-      // If generation has changed, this closure is stale — bail out silently
+      // Bail if generation is stale OR if a real game has already started
       if (retryGenerationRef.current !== generation) return;
+      if (gameStartedRef.current) return;
       console.log(`[React] Sending startCharacterSelect to Unity (${playerCount} players)`);
       unityIframeRef.current?.contentWindow?.postMessage(
         { type: "startCharacterSelect", playerCount }, "*"
@@ -229,6 +232,9 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
       switch (msg.type) {
         case "gameInfo":
           stopRetrying();
+          if (msg.game !== "Lobby" && msg.game !== "CharacterSelect") {
+            gameStartedRef.current = true; // lock out any further startCharacterSelect sends
+          }
           if (msg.game === "CharacterSelect") {
             console.log("[React] Unity confirmed CharacterSelect");
           }

@@ -39,7 +39,8 @@ export default function ControllerPage() {
 
   useEffect(() => {
     const savedEmail = localStorage.getItem(emailKey);
-    if (!savedEmail) setShowEmailModal(true);
+    const savedWallet = localStorage.getItem(walletKey);
+    if (!savedEmail || !savedWallet) setShowEmailModal(true);
   }, []);
 
   useEffect(() => {

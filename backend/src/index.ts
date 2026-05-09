@@ -26,9 +26,7 @@ interface TaggedWS extends WebSocket {
 // ── Keepalive ping every 30s to prevent Railway idle timeout ─────────────────
 setInterval(() => {
   wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.ping();
-    }
+    if (client.readyState === WebSocket.OPEN) client.ping();
   });
 }, 30000);
 
@@ -59,17 +57,28 @@ wss.on("connection", (rawWs: WebSocket) => {
       const room = getRoom(roomCode);
       if (!room) { send(ws, { type: "error", message: "Room not found" }); return; }
 
+      // ── Reconnect with session token ───────────────────────────────────────
       if (sessionToken && room.sessionTokens.has(sessionToken)) {
         const playerIndex = room.sessionTokens.get(sessionToken)!;
-        room.players[playerIndex] = ws;
-        ws._role = "player";
-        ws._roomCode = roomCode;
-        send(ws, { type: "joined", playerIndex, sessionToken });
-        if (room.host) send(room.host, { type: "playerJoined", playerIndex, playerCount: playerCount(room) });
-        console.log(`[ROOM] ${roomCode}: Player ${playerIndex} reconnected`);
-        return;
+        const slotOccupied = room.players[playerIndex] !== null
+          && room.players[playerIndex] !== ws;
+
+        if (!slotOccupied) {
+          // Slot is free — reconnect to original slot normally
+          room.players[playerIndex] = ws;
+          ws._role = "player";
+          ws._roomCode = roomCode;
+          send(ws, { type: "joined", playerIndex, sessionToken });
+          if (room.host) send(room.host, { type: "playerJoined", playerIndex, playerCount: playerCount(room) });
+          console.log(`[ROOM] ${roomCode}: Player ${playerIndex} reconnected`);
+          return;
+        }
+
+        // Slot is occupied by someone else — fall through to assign a new slot
+        console.log(`[ROOM] ${roomCode}: Token slot ${playerIndex} occupied — assigning new slot`);
       }
 
+      // ── Fresh join (or slot was occupied) ─────────────────────────────────
       const slot = room.players.indexOf(null);
       if (slot === -1) { send(ws, { type: "error", message: "Room full" }); return; }
 

@@ -40,7 +40,7 @@ export default function LeaderboardPage() {
 
   const fetchLeaderboard = useCallback(async () => {
     try {
-      const res = await fetch(API);
+      const res = await fetch(API, { cache: "no-store" });
       if (!res.ok) throw new Error();
       const data = await res.json();
       const filtered = (data.entries || [])
@@ -59,7 +59,9 @@ export default function LeaderboardPage() {
   useEffect(() => {
     fetchLeaderboard();
     const interval = setInterval(fetchLeaderboard, 10000);
-    const onFocus = () => fetchLeaderboard();
+    const onFocus = () => {
+      if (document.visibilityState === "visible") fetchLeaderboard();
+    };
     document.addEventListener("visibilitychange", onFocus);
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onFocus); };
   }, [fetchLeaderboard]);
