@@ -1,8 +1,8 @@
-# PlayLana 🎮
+# PlayLana 
 
 > Turn any screen into a party game console. Phones as controllers, real-time WebSocket, Solana on-chain progression.
 
-**🎮 Live demo:** https://play-lana.vercel.app
+** Live demo:** https://play-lana.vercel.app
 
 ---
 
@@ -18,7 +18,7 @@ Built for the **Colosseum Frontier Hackathon 2026** in the **Consumer Apps** cat
 
 ---
 
-## 🔗 All Repos
+##  All Repos
 
 PlayLana spans four codebases. This repo is the entry point.
 
@@ -31,7 +31,7 @@ PlayLana spans four codebases. This repo is the entry point.
 
 ---
 
-## 🔗 Live on Solana Devnet
+##  Live on Solana Devnet
 
 | What | Address |
 |---|---|
