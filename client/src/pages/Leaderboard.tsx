@@ -151,10 +151,10 @@ export default function LeaderboardPage() {
           <>
             {/* Table header */}
             <div style={{
-              display: "grid", gridTemplateColumns: "60px 1fr 80px 120px",
+              display: "grid", gridTemplateColumns: "60px 1fr 80px",
               padding: "0.75rem 1.25rem", borderBottom: `1px solid ${BLUE}33`, marginBottom: "0.25rem",
             }}>
-              {["RANK", "WALLET", "CROWNS", "TIME"].map(h => (
+              {["RANK", "WALLET", "CROWNS"].map(h => (
                 <span key={h} style={{ fontFamily: PX, fontSize: "0.58rem", color: "#444", letterSpacing: "0.1em" }}>{h}</span>
               ))}
             </div>
@@ -167,7 +167,7 @@ export default function LeaderboardPage() {
                 <div
                   key={entry.wallet + entry.rank}
                   style={{
-                    display: "grid", gridTemplateColumns: "60px 1fr 80px 120px",
+                    display: "grid", gridTemplateColumns: "60px 1fr 80px",
                     padding: "0.9rem 1.25rem",
                     background: isTop3 ? `${rowColor}08` : i % 2 === 0 ? "#050505" : "#000",
                     borderLeft: isTop3 ? `2px solid ${rowColor}` : "2px solid transparent",
@@ -186,9 +186,6 @@ export default function LeaderboardPage() {
                   </a>
                   <span style={{ fontFamily: PX, fontSize: "0.5rem", color: isTop3 ? rowColor : "#fff" }}>
                     ♛ {entry.score}
-                  </span>
-                  <span style={{ fontFamily: PX, fontSize: "0.45rem", color: "#333" }}>
-                    {entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : "—"}
                   </span>
                 </div>
               );
