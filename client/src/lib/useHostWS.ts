@@ -46,6 +46,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   const retryGenerationRef = useRef(0);
   const gameStartedRef = useRef(false); // true once any real game begins
   const currentGameRef = useRef<HostState["currentGame"]>("Lobby"); // tracks current game for reconnects
+  const characterSelectConfirmedRef = useRef(false); // true after Unity first confirms CharacterSelect
 
   const postToUnity = useCallback((msg: object) => {
     if (unityReadyRef.current) {
@@ -88,6 +89,7 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
     stopCountdown();
 
     gameStartedRef.current = false; // reset for new game session
+    characterSelectConfirmedRef.current = false; // reset for new game session
     retryGenerationRef.current += 1;
     const generation = retryGenerationRef.current;
 
@@ -239,18 +241,19 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
         case "gameInfo":
           stopRetrying();
 
-          // Ignore stale CharacterSelect from Unity if a real game already started
-          if (msg.game === "CharacterSelect" && gameStartedRef.current) {
-            console.log("[React] Ignoring stale gameInfo: CharacterSelect — game already started");
-            break;
+          // Ignore stale CharacterSelect — either game already started OR we already confirmed it once
+          if (msg.game === "CharacterSelect") {
+            if (characterSelectConfirmedRef.current) {
+              console.log("[React] Ignoring duplicate gameInfo: CharacterSelect");
+              break;
+            }
+            characterSelectConfirmedRef.current = true;
+            console.log("[React] Unity confirmed CharacterSelect — locking out future CharacterSelect messages");
           }
 
           currentGameRef.current = msg.game;
           if (msg.game !== "Lobby" && msg.game !== "CharacterSelect") {
-            gameStartedRef.current = true; // lock out any further startCharacterSelect sends
-          }
-          if (msg.game === "CharacterSelect") {
-            console.log("[React] Unity confirmed CharacterSelect");
+            gameStartedRef.current = true;
           }
           setHostState((s) => ({ ...s, currentGame: msg.game, round: "waiting", winner: null }));
           send({ type: "gameInfo", game: msg.game });
