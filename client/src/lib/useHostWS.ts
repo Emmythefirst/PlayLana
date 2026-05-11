@@ -85,6 +85,17 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
   }, []);
 
   const sendStartToUnity = useCallback(() => {
+    // HARD GUARD: only fire while still in Lobby. Without this, any late
+    // "ready" input arriving after the match has started would re-enter this
+    // path, reset gameStartedRef=false, and restart the 1.5s retry interval
+    // that spams `startCharacterSelect` at Unity mid-game.
+    if (currentGameRef.current !== "Lobby") {
+      console.log(
+        `[React] sendStartToUnity BLOCKED — currentGame="${currentGameRef.current}" (not Lobby)`
+      );
+      return;
+    }
+
     stopRetrying();
     stopCountdown();
 
@@ -114,6 +125,10 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
 
   const startCountdown = useCallback(() => {
     if (countdownIntervalRef.current) return;
+    if (currentGameRef.current !== "Lobby") {
+      console.log(`[React] startCountdown BLOCKED — currentGame="${currentGameRef.current}"`);
+      return;
+    }
     setCountdown(COUNTDOWN_SECONDS);
     let remaining = COUNTDOWN_SECONDS;
     countdownIntervalRef.current = setInterval(() => {
@@ -184,6 +199,14 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
           unityIframeRef.current?.contentWindow?.postMessage(unityMsg, "*");
 
           if (msg.inputType === "ready") {
+            // Ignore ready inputs after lobby — prevents late/reconnect "ready"
+            // from kicking the countdown → startCharacterSelect path mid-game.
+            if (currentGameRef.current !== "Lobby") {
+              console.log(
+                `[React] ready input ignored — currentGame="${currentGameRef.current}" (post-lobby)`
+              );
+              break;
+            }
             setHostState((s) => {
               const players = [...s.players] as HostState["players"];
               if (players[msg.playerIndex]) {
