@@ -175,6 +175,12 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
             playerIndex: msg.playerIndex,
             ...(msg.direction && { direction: msg.direction }),
           };
+          if (msg.inputType === "move" || msg.inputType === "jump") {
+            console.log(
+              `[Host] ${new Date().toISOString()} input recv P${msg.playerIndex} ` +
+              `type=${msg.inputType} dir=${msg.direction ?? "—"} → forwarding to Unity`
+            );
+          }
           unityIframeRef.current?.contentWindow?.postMessage(unityMsg, "*");
 
           if (msg.inputType === "ready") {
@@ -238,17 +244,22 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
       if (!msg?.type) return;
 
       switch (msg.type) {
-        case "gameInfo":
+        case "gameInfo": {
+          const ts = new Date().toISOString();
+          console.log(
+            `[Host] ${ts} gameInfo recv from Unity: "${msg.game}" ` +
+            `(gameStarted=${gameStartedRef.current}, characterSelectConfirmed=${characterSelectConfirmedRef.current})`
+          );
           stopRetrying();
 
           // Ignore stale CharacterSelect — if already confirmed once OR real game already started
           if (msg.game === "CharacterSelect") {
             if (characterSelectConfirmedRef.current || gameStartedRef.current) {
-              console.log("[React] Ignoring stale gameInfo: CharacterSelect");
+              console.log(`[Host] ${ts} IGNORED stale gameInfo: CharacterSelect`);
               break;
             }
             characterSelectConfirmedRef.current = true;
-            console.log("[React] Unity confirmed CharacterSelect — locking out future CharacterSelect messages");
+            console.log(`[Host] ${ts} Unity confirmed CharacterSelect — locking out future CharacterSelect messages`);
           }
 
           currentGameRef.current = msg.game;
@@ -256,8 +267,10 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
             gameStartedRef.current = true;
           }
           setHostState((s) => ({ ...s, currentGame: msg.game, round: "waiting", winner: null }));
+          console.log(`[Host] ${ts} forwarding gameInfo to server: "${msg.game}"`);
           send({ type: "gameInfo", game: msg.game });
           break;
+        }
 
         case "state": {
           const { type: _, ...rest } = msg;

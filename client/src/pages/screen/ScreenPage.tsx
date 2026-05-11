@@ -17,17 +17,24 @@ export default function ScreenPage() {
       {/* Lobby — shown until game starts */}
       {!gameStarted && <LobbyView state={hostState} countdown={countdown} />}
 
-      {/* Unity iframe — ALWAYS mounted so it can receive startCharacterSelect */}
+      {/* Unity iframe — ALWAYS mounted AND visible so Unity initializes at full
+          container size on page load. While the lobby is shown we sit it
+          underneath at opacity ~0 with pointer-events off. visibility:hidden /
+          display:none would cause Unity's canvas to init at 0×0. */}
       <iframe
         ref={iframeRef}
         src={UNITY_BUILD_URL}
         title="PlayLana Game"
         allow="autoplay; fullscreen"
         style={{
+          position: "absolute",
+          inset: 0,
           width: "100%",
           height: "100%",
           border: "none",
-          display: gameStarted ? "block" : "none",
+          opacity: gameStarted ? 1 : 0.001,
+          pointerEvents: gameStarted ? "auto" : "none",
+          zIndex: gameStarted ? 1 : 0,
         }}
       />
 

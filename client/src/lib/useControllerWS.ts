@@ -30,6 +30,7 @@ export function useControllerWS(roomCode: string) {
           navigator.vibrate?.(100);
           break;
         case "gameInfo":
+          console.log(`[Controller] ${new Date().toISOString()} gameInfo recv: "${msg.game}"`);
           setState((s) => ({ ...s, currentGame: msg.game }));
           navigator.vibrate?.(50);
           break;
@@ -66,8 +67,14 @@ export function useControllerWS(roomCode: string) {
     send({ type: "join", roomCode, ...(sessionToken && { sessionToken }) });
   }, [send, roomCode, sessionKey]);
 
-  const sendMove   = useCallback((direction: Direction) => send({ type: "move", direction }), [send]);
-  const sendJump   = useCallback(() => send({ type: "jump" }), [send]);
+  const sendMove   = useCallback((direction: Direction) => {
+    console.log(`[Controller] ${new Date().toISOString()} → WS send: {type:"move", direction:"${direction}"}`);
+    send({ type: "move", direction });
+  }, [send]);
+  const sendJump   = useCallback(() => {
+    console.log(`[Controller] ${new Date().toISOString()} → WS send: {type:"jump"}`);
+    send({ type: "jump" });
+  }, [send]);
   const sendTap    = useCallback(() => { send({ type: "tap" }); navigator.vibrate?.(15); }, [send]);
   const sendReady  = useCallback(() => send({ type: "ready" }), [send]);
   const sendWallet = useCallback((wallet: string) => send({ type: "wallet", wallet }), [send]);
