@@ -66,6 +66,7 @@ export default function ControllerPage() {
 
   useEffect(() => {
     if (!connected) walletSentRef.current = false;
+    setIsReady(false);
   }, [connected]);
 
   useEffect(() => {

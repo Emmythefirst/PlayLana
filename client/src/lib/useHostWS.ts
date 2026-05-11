@@ -241,10 +241,10 @@ export function useHostWS(unityIframeRef: React.RefObject<HTMLIFrameElement | nu
         case "gameInfo":
           stopRetrying();
 
-          // Ignore stale CharacterSelect — either game already started OR we already confirmed it once
+          // Ignore stale CharacterSelect — if already confirmed once OR real game already started
           if (msg.game === "CharacterSelect") {
-            if (characterSelectConfirmedRef.current) {
-              console.log("[React] Ignoring duplicate gameInfo: CharacterSelect");
+            if (characterSelectConfirmedRef.current || gameStartedRef.current) {
+              console.log("[React] Ignoring stale gameInfo: CharacterSelect");
               break;
             }
             characterSelectConfirmedRef.current = true;
