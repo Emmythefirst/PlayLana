@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from "react";
 import type { Direction } from "@/types/messages";
 
 interface Props {
@@ -5,54 +6,33 @@ interface Props {
   onJump: () => void;
 }
 
-function RoundBtn({ label, onPress, onRelease }: {
-  label: string;
-  onPress: () => void;
-  onRelease?: () => void;
-  color?: string;
-}) {
-  return (
-    <button
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        e.currentTarget.style.background = "#333";
-        e.currentTarget.style.transform = "scale(0.93)";
-        onPress();
-      }}
-      onPointerUp={(e) => {
-        e.currentTarget.style.background = "#1c1c1c";
-        e.currentTarget.style.transform = "scale(1)";
-        onRelease?.();
-      }}
-      onPointerCancel={(e) => {
-        e.currentTarget.style.background = "#1c1c1c";
-        e.currentTarget.style.transform = "scale(1)";
-        onRelease?.();
-      }}
-      style={{
-        width: 88,
-        height: 88,
-        borderRadius: "50%",
-        border: "2px solid #333",
-        background: "#1c1c1c",
-        color: "#fff",
-        fontSize: "1.5rem",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        touchAction: "none",
-        userSelect: "none",
-        cursor: "pointer",
-        transition: "background 0.07s, transform 0.07s",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
 export function HeadSmashController({ onMove, onJump }: Props) {
-  const release = () => onMove("none");
+  // Track which direction (if any) is currently held. Per-button so a stray
+  // release on LEFT can't clear the state when RIGHT is still pressed.
+  const activeDir = useRef<Direction | null>(null);
+
+  const press = useCallback((dir: Direction) => {
+    if (activeDir.current === dir) return;
+    activeDir.current = dir;
+    onMove(dir);
+  }, [onMove]);
+
+  const release = useCallback((dir: Direction) => {
+    if (activeDir.current !== dir) return;
+    activeDir.current = null;
+    onMove("none");
+  }, [onMove]);
+
+  // Failsafe — if this controller unmounts (scene switch, game ends) while a
+  // button is still considered pressed, tell Unity to stop moving.
+  useEffect(() => {
+    return () => {
+      if (activeDir.current !== null) {
+        activeDir.current = null;
+        onMove("none");
+      }
+    };
+  }, [onMove]);
 
   return (
     <div style={{
@@ -69,6 +49,7 @@ export function HeadSmashController({ onMove, onJump }: Props) {
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <button
           onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
             e.currentTarget.style.background = "#1a3a6e";
             e.currentTarget.style.transform = "scale(0.94)";
             navigator.vibrate?.(30);
@@ -101,6 +82,7 @@ export function HeadSmashController({ onMove, onJump }: Props) {
             userSelect: "none",
             cursor: "pointer",
             transition: "background 0.07s, transform 0.07s",
+            WebkitTapHighlightColor: "transparent",
           }}
         >
           <span style={{ fontSize: "2rem", lineHeight: 1 }}>↑</span>
@@ -108,17 +90,69 @@ export function HeadSmashController({ onMove, onJump }: Props) {
         </button>
       </div>
 
-      {/* RIGHT — 3 round buttons: up top, left+right bottom */}
+      {/* RIGHT — left + right round buttons */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
-        {/* Up button — not used in HeadSmash but kept for layout symmetry */}
-        <div style={{ width: 88, height: 88 }} /> {/* spacer */}
-
-        {/* Left + Right */}
+        <div style={{ width: 88, height: 88 }} /> {/* spacer for layout symmetry */}
         <div style={{ display: "flex", gap: "1rem" }}>
-          <RoundBtn label="←" onPress={() => onMove("left")} onRelease={release} />
-          <RoundBtn label="→" onPress={() => onMove("right")} onRelease={release} />
+          <DirBtn label="←" dir="left"  onPress={press} onRelease={release} />
+          <DirBtn label="→" dir="right" onPress={press} onRelease={release} />
         </div>
       </div>
     </div>
+  );
+}
+
+function DirBtn({ label, dir, onPress, onRelease }: {
+  label: string;
+  dir: Direction;
+  onPress: (d: Direction) => void;
+  onRelease: (d: Direction) => void;
+}) {
+  return (
+    <button
+      onPointerDown={(e) => {
+        // Pointer capture guarantees this element receives the matching
+        // pointerup/cancel even if the finger slides off the button —
+        // without it, sliding off leaves the direction stuck.
+        e.currentTarget.setPointerCapture(e.pointerId);
+        e.currentTarget.style.background = "#333";
+        e.currentTarget.style.transform = "scale(0.93)";
+        onPress(dir);
+      }}
+      onPointerUp={(e) => {
+        e.currentTarget.style.background = "#1c1c1c";
+        e.currentTarget.style.transform = "scale(1)";
+        onRelease(dir);
+      }}
+      onPointerCancel={(e) => {
+        e.currentTarget.style.background = "#1c1c1c";
+        e.currentTarget.style.transform = "scale(1)";
+        onRelease(dir);
+      }}
+      onPointerLeave={(e) => {
+        e.currentTarget.style.background = "#1c1c1c";
+        e.currentTarget.style.transform = "scale(1)";
+        onRelease(dir);
+      }}
+      style={{
+        width: 88,
+        height: 88,
+        borderRadius: "50%",
+        border: "2px solid #333",
+        background: "#1c1c1c",
+        color: "#fff",
+        fontSize: "1.5rem",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        touchAction: "none",
+        userSelect: "none",
+        cursor: "pointer",
+        transition: "background 0.07s, transform 0.07s",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      {label}
+    </button>
   );
 }

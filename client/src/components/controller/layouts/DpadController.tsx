@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Direction } from "@/types/messages";
 
 interface Props {
@@ -37,6 +37,17 @@ export function DpadController({
     activeDir.current = null;
     setHighlight(null);
     onMove("none");
+  }, [onMove]);
+
+  // Failsafe — if this controller unmounts mid-press (game ends, scene
+  // switch), make sure Unity stops moving the player.
+  useEffect(() => {
+    return () => {
+      if (activeDir.current !== null) {
+        activeDir.current = null;
+        onMove("none");
+      }
+    };
   }, [onMove]);
 
   // Sizes — tuned for thumb reach in landscape
