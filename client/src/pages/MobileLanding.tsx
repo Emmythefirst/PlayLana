@@ -5,7 +5,7 @@ const YELLOW = "#f5c518";
 const BLUE = "#3b82f6";
 const GREEN = "#22c55e";
 
-const YOUTUBE_URL = "https://www.youtube.com/@playlana";
+const YOUTUBE_URL = "https://youtu.be/n1J2pENl04k";
 const X_URL = "https://x.com/playlanadotgg?s=20";
 
 export default function MobileLanding() {
